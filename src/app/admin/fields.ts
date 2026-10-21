@@ -155,6 +155,12 @@ export const COLLECTIONS: CollectionConfig[] = [
       { column: "sort_order", label: "Urutan", type: "number", inTable: true },
     ],
   },
+  {
+    key: "settings",
+    label: "Pengaturan Yayasan",
+    titleColumn: "key",
+    fields: [],
+  },
 ];
 
 /** Ubah nilai timestamptz dari database menjadi format input `date`. */

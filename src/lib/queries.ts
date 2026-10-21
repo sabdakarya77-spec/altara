@@ -387,3 +387,26 @@ export async function getHeroSlides(): Promise<HeroSlide[]> {
   }));
 }
 
+/* ─── Pengaturan Organisasi ─────────────────────────────────────────── */
+
+export type { SiteSettings } from "@/data/settings";
+export { DEFAULT_SETTINGS } from "@/data/settings";
+import { DEFAULT_SETTINGS, type SiteSettings } from "@/data/settings";
+
+export async function getSettings(): Promise<SiteSettings> {
+  const rows = await queryMaybe<{ key: string; value: string }>(
+    "SELECT key, value FROM settings"
+  );
+  if (!rows || rows.length === 0) {
+    return DEFAULT_SETTINGS;
+  }
+  const result = { ...DEFAULT_SETTINGS };
+  for (const r of rows) {
+    if (r.key in result) {
+      (result as Record<string, string>)[r.key] = r.value;
+    }
+  }
+  return result;
+}
+
+

@@ -7,6 +7,7 @@ import { COLLECTIONS, type CollectionConfig } from "./fields";
 import { emptyValues, toPayload, valuesFromRow, type FormValues } from "./admin-entry-form";
 import { EntryTable, type Row } from "./admin-entry-table";
 import { EntryDialog } from "./admin-entry-dialog";
+import { SettingsView } from "./settings-view";
 
 /**
  * Panel admin ALTARA.
@@ -41,6 +42,13 @@ export default function AdminDashboard() {
   const load = useCallback(async (key: string) => {
     setLoading(true);
     setLoadError("");
+
+    if (key === "settings") {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/admin/${key}`, { cache: "no-store" });
       if (res.status === 401) {
@@ -211,15 +219,19 @@ export default function AdminDashboard() {
             <div>
               <h1 className="font-display text-3xl font-light text-ink">{active.label}</h1>
               <p className="mt-2 max-w-2xl text-sm text-muted">
-                Perubahan tersimpan langsung di Postgres dan tampil di situs publik.
+                {activeKey === "settings"
+                  ? "Kelola identitas kontak yayasan, nomor rekening donasi resmi, dan media sosial resmi."
+                  : "Perubahan tersimpan langsung di Postgres dan tampil di situs publik."}
               </p>
             </div>
-            <button
-              onClick={openCreate}
-              className="rounded-md bg-ink px-4 py-2 text-sm text-parchment"
-            >
-              + Tambah
-            </button>
+            {activeKey !== "settings" ? (
+              <button
+                onClick={openCreate}
+                className="rounded-md bg-ink px-4 py-2 text-sm text-parchment transition-colors hover:bg-forest"
+              >
+                + Tambah
+              </button>
+            ) : null}
           </div>
 
           {notice ? (
@@ -233,14 +245,18 @@ export default function AdminDashboard() {
             </p>
           ) : null}
 
-          <EntryTable
-            fields={tableFields}
-            rows={rows}
-            loading={loading}
-            onEdit={openEdit}
-            onTogglePublished={togglePublished}
-            onRemove={remove}
-          />
+          {activeKey === "settings" ? (
+            <SettingsView />
+          ) : (
+            <EntryTable
+              fields={tableFields}
+              rows={rows}
+              loading={loading}
+              onEdit={openEdit}
+              onTogglePublished={togglePublished}
+              onRemove={remove}
+            />
+          )}
         </main>
       </div>
 

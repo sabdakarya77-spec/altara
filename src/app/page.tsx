@@ -9,6 +9,7 @@ import {
   getJournal,
   getPartners,
   getPrograms,
+  getSettings,
   getStats,
   getStories,
 } from "@/lib/queries";
@@ -22,15 +23,17 @@ import {
  * halaman ini dirender ulang dengan data terbaru.
  */
 export default async function Home() {
-  const [heroSlides, programs, stats, stories, journal, documents, partners] = await Promise.all([
-    getHeroSlides(),
-    getPrograms(),
-    getStats(),
-    getStories(),
-    getJournal(),
-    getDocuments(),
-    getPartners(),
-  ]);
+  const [heroSlides, programs, stats, stories, journal, documents, partners, settings] =
+    await Promise.all([
+      getHeroSlides(),
+      getPrograms(),
+      getStats(),
+      getStories(),
+      getJournal(),
+      getDocuments(),
+      getPartners(),
+      getSettings(),
+    ]);
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -47,9 +50,9 @@ export default async function Home() {
         <FounderMessage />
         <Transparency documents={documents} />
         <Partners partners={partners} />
-        <SupportCTA />
+        <SupportCTA settings={settings} />
       </main>
-      <Footer />
+      <Footer settings={settings} />
     </div>
   );
 }
