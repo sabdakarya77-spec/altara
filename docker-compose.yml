@@ -1,0 +1,164 @@
+# Stack produksi ALTARA: Next.js (standalone) + Postgres + Caddy.
+#
+#   docker compose up -d --build     # jalankan semua (migrasi+seed otomatis)
+#   docker compose run --rm migrate  # jalankan migrasi+seed manual (idempoten)
+#   docker compose logs -f app       # pantau log aplikasi
+#
+# Untuk pengembangan lokal, cukup: `docker compose up -d db`
+# lalu jalankan `pnpm dev` di host.
+#
+# CATATAN: `migrate` berjalan otomatis lebih dulu (`service_completed_successfully`),
+# jadi `docker compose up` pada volume kosong aman — skema dan data awal selalu
+# siap sebelum aplikasi menerima traffic.
+
+name: altara
+
+x-app-env: &app-env
+  # Host internal untuk Postgres. Port 5432 TIDAK dipetakan ke host, jadi
+  # database hanya bisa dijangkau dari dalam network compose ini.
+  DATABASE_URL: postgres://altara:${POSTGRES_PASSWORD:-altara}@db:5432/altara
+  DATABASE_SSL: "false"
+  DATABASE_POOL_MAX: "10"
+  # Password admin. Kosongkan berarti login admin MUSTAHIL (fail closed) —
+  # `verifyPassword()` menolak semua input bila env ini tidak terisi. Jadi
+  # setelan bawaan ini aman, hanya tidak bisa dipakai.
+  # CATATAN: Compose menginterpolasi seluruh berkas sebelum menjalankan
+  # service mana pun, jadi placeholder bertanda `:?` (wajib) di sini akan
+  # membuat `docker compose up -d db` untuk pengembangan lokal ikut gagal.
+  # Validasi "wajib isi" dilakukan oleh aplikasi, bukan oleh Compose.
+  ALTARA_ADMIN_PASSWORD: ${ALTARA_ADMIN_PASSWORD:-}
+  ALTARA_UPLOAD_DIR: /app/data/uploads
+  # URL kanonik situs (dipakai server-side untuk metadata & tautan absolut).
+  # Sengaja BUKAN `NEXT_PUBLIC_*`: variabel berawalan NEXT_PUBLIC_* di-inline
+  # Next.js saat BUILD, jadi nilai yang diset di runtime container tidak akan
+  # pernah terbaca.
+  SITE_URL: ${SITE_URL:-https://altara.or.id}
+  NODE_ENV: production
+
+services:
+  # ---------- Database ----------
+  db:
+    image: postgres:16-alpine
+    container_name: altara-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: altara
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-altara}
+      POSTGRES_DB: altara
+      # Encoding UTF-8 supaya teks Indonesia aman (tanpa ini defaultnya bisa UTF8 tanpa locale).
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    # Hanya di-bind ke loopback host. Dari luar tidak bisa dijangkau, dan
+    # aplikasi di dalam network compose tetap bisa lewat `db:5432`.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - altara-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U altara -d altara"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - altara
+
+  # ---------- Aplikasi ----------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: altara-app
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    # Port aplikasi tidak dipetakan ke host: hanya Caddy yang boleh
+    # menjangkau lewat network internal.
+    expose:
+      - "3000"
+    volumes:
+      # Folder upload gambar hidup di volume terpisah supaya data tidak
+      # hilang saat image di-build ulang.
+      - altara-uploads:/app/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      # Migrasi + seed harus SELESAI dulu. Tanpa ini, `docker compose up` pada
+      # volume kosong bisa menyalakan aplikasi sebelum skema ada: database hidup
+      # tapi tabel kosong, dan `queryMaybe()` mengembalikan `[]` (bukan `null`)
+      # sehingga situs menampilkan beranda KOSONG tanpa fallback statis.
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --tries=1
+        - --output-document=/dev/null
+        - http://127.0.0.1:3000/api/health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - altara
+
+  # ---------- Reverse proxy + TLS ----------
+  caddy:
+    image: caddy:2-alpine
+    container_name: altara-caddy
+    restart: unless-stopped
+    environment:
+      CADDY_DOMAIN: ${CADDY_DOMAIN:-altara.or.id}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@altara.or.id}
+      ACME_CA: ${ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Simpan sertifikat & kunci di volume: hilang tiap restart container
+      # akan memicu rate limit Let's Encrypt.
+      - altara-caddy-data:/data
+      - altara-caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - altara
+
+  # ---------- Migrasi + seed (job sekali jalan) ----------
+  # Dijalankan OTOMATIS oleh `docker compose up`: service `app` bergantung
+  # pada service ini lewat `service_completed_successfully`, jadi skema dan
+  # data awal selalu siap sebelum aplikasi menerima traffic.
+  #
+  # Bisa juga dipanggil manual: `docker compose run --rm migrate`
+  # (berguna untuk menjalankan ulang migrasi/seed tanpa rebuilding app).
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    # Sengaja TIDAK memakai `container_name`: perintah `docker compose run`
+    # membuat container dengan nama otomatis, dan `container_name` yang
+    # bentrok akan membuat perintah itu gagal di pemakaian kedua.
+    environment:
+      DATABASE_URL: postgres://altara:${POSTGRES_PASSWORD:-altara}@db:5432/altara
+      DATABASE_SSL: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - altara
+
+volumes:
+  altara-db-data:
+  altara-uploads:
+  altara-caddy-data:
+  altara-caddy-config:
+
+networks:
+  altara:
+    driver: bridge

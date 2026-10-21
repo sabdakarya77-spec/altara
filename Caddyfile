@@ -1,0 +1,54 @@
+# Caddy sebagai reverse proxy + TLS otomatis untuk ALTARA.
+#
+# Sertifikat Let's Encrypt diterbitkan otomatis begitu domain resolve ke IP
+# publik dan port 80/443 terbuka. Untuk uji lokal (tanpa domain), jalankan
+# Caddy dengan `CADDY_DOMAIN=:80` lewat compose override.
+
+{
+	# Email untuk notifikasi pembaruan sertifikat Let's Encrypt.
+	email {$ACME_EMAIL:admin@altara.or.id}
+
+	# Jangan pakai ACME staging di produksi.
+	acme_ca {$ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
+}
+
+{$CADDY_DOMAIN:altara.or.id} {
+	encode zstd gzip
+
+	# Header keamanan. HSTS sengaja tidak diaktifkan: domain/www masih
+	# bisa dipakai untuk environment lain, dan HSTS sulit dibatalkan.
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Berkas hasil unggahan dilayani aplikasi lewat route /uploads dengan
+	# cache immutable (nama berkas berisi UUID). Router di sini hanya
+	# meneruskan.
+	@uploads path /uploads/*
+	handle @uploads {
+		reverse_proxy app:3000
+	}
+
+	# Sisanya: aplikasi Next.js.
+	handle {
+		reverse_proxy app:3000 {
+			# Tunggu sampai aplikasi siap menerima koneksi.
+			# `/api/health` adalah liveness check: selalu 200 selama proses
+			# Next.js hidup, termasuk ketika database sedang mati (situs
+			# masih bisa menyajikan fallback statis). Jangan pakai
+			# `/api/ready` di sini — endpoint itu sengaja 503 saat database
+			# down, dan Caddy akan langsung menolak semua request.
+			health_uri /api/health
+			health_interval 10s
+			health_timeout 5s
+		}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

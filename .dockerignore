@@ -1,0 +1,31 @@
+# Dependensi lokal di-build ulang di dalam image (linux). Menyalin node_modules
+# dari host akan membawa binary sharp untuk Windows.
+node_modules
+.next
+out
+
+# Berkas environment tidak boleh masuk image. Nilai rahasia hanya lewat
+# `--env-file` / secrets di runtime.
+.env
+.env.*
+!.env.example
+
+# VCS & editor
+.git
+.gitignore
+.vscode
+.idea
+
+# Log & cache
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.cache
+.eslintcache
+*.tsbuildinfo
+
+# Berkas yang tidak dibutuhkan runtime
+docs
+README.md
+Dockerfile
+.dockerignore

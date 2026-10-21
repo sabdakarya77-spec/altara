@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ivory: #f5f2ec;
+  --ink: #171717;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: Inter, system-ui, sans-serif;
+  font-feature-settings: "kern" 1;
+}
+
+::selection {
+  background: #1e3a2b;
+  color: #f5f2ec;
+}
+
+@layer components {
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #6f6b64;
+  }
+  .display-hero {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 300;
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    font-size: clamp(2.75rem, 7.2vw, 6.5rem);
+  }
+  .display-lg {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 300;
+    line-height: 1.06;
+    letter-spacing: -0.018em;
+    font-size: clamp(2.125rem, 4.6vw, 4rem);
+  }
+  .display-md {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 300;
+    line-height: 1.14;
+    letter-spacing: -0.015em;
+    font-size: clamp(1.625rem, 2.9vw, 2.5rem);
+  }
+  .body-lead {
+    font-size: clamp(1rem, 1.15vw, 1.125rem);
+    line-height: 1.75;
+    color: #6f6b64;
+  }
+  .hairline {
+    border-top: 1px solid #dcd5c4;
+  }
+  .shell {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 90rem;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 48rem) {
+    .shell {
+      padding-inline: 2.5rem;
+    }
+  }
+  @media (min-width: 80rem) {
+    .shell {
+      padding-inline: 4rem;
+    }
+  }
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity 800ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      transform 800ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .reveal[data-visible="true"] {
+    opacity: 1;
+    transform: none;
+  }
+  .image-reveal {
+    clip-path: inset(0 0 100% 0);
+    transform: scale(1.06);
+    transition:
+      clip-path 900ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      transform 1200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .image-reveal[data-visible="true"] {
+    clip-path: inset(0 0 0 0);
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal,
+  .image-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    transition: none !important;
+  }
+}
+
