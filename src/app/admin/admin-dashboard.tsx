@@ -8,6 +8,7 @@ import { emptyValues, toPayload, valuesFromRow, type FormValues } from "./admin-
 import { EntryTable, type Row } from "./admin-entry-table";
 import { EntryDialog } from "./admin-entry-dialog";
 import { SettingsView } from "./settings-view";
+import { DashboardOverview } from "./dashboard-overview";
 
 /**
  * Panel admin ALTARA.
@@ -33,6 +34,7 @@ export default function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [notice, setNotice] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const active = useMemo(
     () => COLLECTIONS.find((c) => c.key === activeKey) ?? COLLECTIONS[0],
@@ -43,7 +45,7 @@ export default function AdminDashboard() {
     setLoading(true);
     setLoadError("");
 
-    if (key === "settings") {
+    if (key === "overview" || key === "settings") {
       setRows([]);
       setLoading(false);
       return;
@@ -80,6 +82,15 @@ export default function AdminDashboard() {
     setValues(emptyValues(active.fields));
     setSaveError("");
     setModal({ mode: "create", collection: active });
+  }
+
+  function openCreateFor(key: string) {
+    const col = COLLECTIONS.find((c) => c.key === key);
+    if (!col) return;
+    setActiveKey(key);
+    setValues(emptyValues(col.fields));
+    setSaveError("");
+    setModal({ mode: "create", collection: col });
   }
 
   function openEdit(row: Row) {
@@ -156,6 +167,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen bg-ivory">
+      {/* ── Sidebar Desktop ───────────────────────────────────────────── */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-parchment md:flex">
         <div className="border-b border-line px-5 py-5">
           <Image
@@ -200,9 +212,92 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
+      {/* ── Mobile Drawer Navigation ──────────────────────────────────── */}
+      {mobileMenuOpen ? (
+        <div className="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true">
+          <div
+            className="fixed inset-0 bg-ink/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative flex w-4/5 max-w-xs flex-1 flex-col border-r border-line bg-parchment p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-line pb-4">
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/assets/logo-emblem.png"
+                  alt="Lambang Yayasan"
+                  width={40}
+                  height={40}
+                  className="h-8 w-auto object-contain"
+                />
+                <div>
+                  <p className="text-sm font-medium text-ink">Panel Admin</p>
+                  <p className="eyebrow text-[10px]">ALTARA</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-md border border-line p-1 text-sm text-muted hover:text-ink"
+              >
+                ✕
+              </button>
+            </div>
+
+            <nav className="mt-4 flex-1 space-y-1 overflow-y-auto">
+              {COLLECTIONS.map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => {
+                    setActiveKey(item.key);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${
+                    activeKey === item.key
+                      ? "bg-ink font-medium text-parchment"
+                      : "text-muted hover:bg-forest/10 hover:text-ink"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            <div className="space-y-2 border-t border-line pt-4">
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted hover:text-ink"
+              >
+                <span>Lihat Situs</span>
+                <span className="text-xs">↗</span>
+              </a>
+              <button
+                onClick={logout}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-800 hover:bg-red-50"
+              >
+                Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="min-w-0 flex-1">
         <header className="flex items-center justify-between gap-4 border-b border-line bg-parchment px-4 py-3 md:px-6">
-          <p className="eyebrow">Pengelolaan konten — {active.label}</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="flex items-center gap-1.5 rounded border border-line bg-white px-2.5 py-1 text-xs text-ink md:hidden"
+            >
+              <span className="text-sm leading-none">☰</span>
+              <span>Menu</span>
+            </button>
+            <p className="eyebrow">
+              {activeKey === "overview"
+                ? "Pusat Kendali"
+                : `Pengelolaan konten — ${active.label}`}
+            </p>
+          </div>
           <div className="flex items-center gap-3">
             <span className="hidden text-xs text-muted sm:inline">Administrator</span>
             <button
@@ -215,24 +310,26 @@ export default function AdminDashboard() {
         </header>
 
         <main className="px-4 py-6 md:px-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="font-display text-3xl font-light text-ink">{active.label}</h1>
-              <p className="mt-2 max-w-2xl text-sm text-muted">
-                {activeKey === "settings"
-                  ? "Kelola identitas kontak yayasan, nomor rekening donasi resmi, dan media sosial resmi."
-                  : "Perubahan tersimpan langsung di Postgres dan tampil di situs publik."}
-              </p>
+          {activeKey !== "overview" ? (
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h1 className="font-display text-3xl font-light text-ink">{active.label}</h1>
+                <p className="mt-2 max-w-2xl text-sm text-muted">
+                  {activeKey === "settings"
+                    ? "Kelola identitas kontak yayasan, nomor rekening donasi resmi, dan media sosial resmi."
+                    : "Perubahan tersimpan langsung di Postgres dan tampil di situs publik."}
+                </p>
+              </div>
+              {activeKey !== "settings" ? (
+                <button
+                  onClick={openCreate}
+                  className="rounded-md bg-ink px-4 py-2 text-sm text-parchment transition-colors hover:bg-forest"
+                >
+                  + Tambah
+                </button>
+              ) : null}
             </div>
-            {activeKey !== "settings" ? (
-              <button
-                onClick={openCreate}
-                className="rounded-md bg-ink px-4 py-2 text-sm text-parchment transition-colors hover:bg-forest"
-              >
-                + Tambah
-              </button>
-            ) : null}
-          </div>
+          ) : null}
 
           {notice ? (
             <p className="mt-4 rounded-md border border-line bg-parchment px-4 py-2.5 text-sm text-ink">
@@ -245,10 +342,16 @@ export default function AdminDashboard() {
             </p>
           ) : null}
 
-          {activeKey === "settings" ? (
+          {activeKey === "overview" ? (
+            <DashboardOverview
+              onNavigate={(key) => setActiveKey(key)}
+              onQuickCreate={openCreateFor}
+            />
+          ) : activeKey === "settings" ? (
             <SettingsView />
           ) : (
             <EntryTable
+              collectionKey={active.key}
               fields={tableFields}
               rows={rows}
               loading={loading}

@@ -44,6 +44,12 @@ export type CollectionConfig = {
 
 export const COLLECTIONS: CollectionConfig[] = [
   {
+    key: "overview",
+    label: "Ringkasan",
+    titleColumn: "title",
+    fields: [],
+  },
+  {
     key: "hero_slides",
     label: "Hero Slider",
     titleColumn: "headline",

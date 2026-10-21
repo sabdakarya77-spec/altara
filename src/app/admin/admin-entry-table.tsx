@@ -9,6 +9,7 @@ export type Row = Record<string, unknown> & { id: number };
  * Kolom yang ditampilkan ditentukan oleh `inTable` pada definisi field.
  */
 export function EntryTable({
+  collectionKey,
   fields,
   rows,
   loading,
@@ -16,6 +17,7 @@ export function EntryTable({
   onTogglePublished,
   onRemove,
 }: {
+  collectionKey?: string;
   fields: Field[];
   rows: Row[];
   loading: boolean;
@@ -23,6 +25,20 @@ export function EntryTable({
   onTogglePublished: (row: Row) => void;
   onRemove: (row: Row) => void;
 }) {
+  function getPreviewUrl(row: Row): string | null {
+    if (!collectionKey) return null;
+    if (collectionKey === "programs" && row.slug) return `/program/${row.slug}`;
+    if (collectionKey === "stories" && row.slug) return `/cerita/${row.slug}`;
+    if (collectionKey === "journal" && row.slug) return `/jurnal/${row.slug}`;
+    if (collectionKey === "hero_slides") return "/";
+    if (collectionKey === "stats") return "/#dampak";
+    if (collectionKey === "documents") {
+      return typeof row.file_url === "string" && row.file_url ? row.file_url : "/#transparansi";
+    }
+    if (collectionKey === "partners") return "/#";
+    return null;
+  }
+
   return (
     <div className="mt-6 overflow-x-auto rounded-lg border border-line bg-parchment">
       <table className="w-full border-collapse text-sm">
@@ -50,37 +66,53 @@ export function EntryTable({
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
-              <tr key={row.id} className="border-b border-line/60 last:border-0">
-                {fields.map((field) => (
-                  <td key={field.column} className="px-4 py-3 text-ink">
-                    <CellValue field={field} row={row} />
-                  </td>
-                ))}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <button
-                    onClick={() => onEdit(row)}
-                    className="mr-2 rounded border border-line px-2 py-1 text-xs"
-                  >
-                    Ubah
-                  </button>
-                  {"published" in row ? (
+            rows.map((row) => {
+              const previewUrl = getPreviewUrl(row);
+
+              return (
+                <tr key={row.id} className="border-b border-line/60 last:border-0">
+                  {fields.map((field) => (
+                    <td key={field.column} className="px-4 py-3 text-ink">
+                      <CellValue field={field} row={row} />
+                    </td>
+                  ))}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {previewUrl ? (
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Lihat di Web"
+                        className="mr-2 inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-xs text-muted transition-colors hover:border-forest hover:text-ink"
+                      >
+                        <span>Lihat</span>
+                        <span className="text-[10px]">↗</span>
+                      </a>
+                    ) : null}
                     <button
-                      onClick={() => onTogglePublished(row)}
-                      className="mr-2 rounded border border-line px-2 py-1 text-xs"
+                      onClick={() => onEdit(row)}
+                      className="mr-2 rounded border border-line px-2 py-1 text-xs transition-colors hover:border-ink hover:text-ink"
                     >
-                      {row.published ? "Draft" : "Terbit"}
+                      Ubah
                     </button>
-                  ) : null}
-                  <button
-                    onClick={() => onRemove(row)}
-                    className="rounded border border-line px-2 py-1 text-xs text-red-800"
-                  >
-                    Hapus
-                  </button>
-                </td>
-              </tr>
-            ))
+                    {"published" in row ? (
+                      <button
+                        onClick={() => onTogglePublished(row)}
+                        className="mr-2 rounded border border-line px-2 py-1 text-xs transition-colors hover:border-ink"
+                      >
+                        {row.published ? "Draft" : "Terbit"}
+                      </button>
+                    ) : null}
+                    <button
+                      onClick={() => onRemove(row)}
+                      className="rounded border border-line px-2 py-1 text-xs text-red-800 transition-colors hover:border-red-900/40 hover:bg-red-50"
+                    >
+                      Hapus
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
