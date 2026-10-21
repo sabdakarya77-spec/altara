@@ -5,6 +5,7 @@ import { ImpactStats, StoryFeature, StoryGrid, JournalSection } from "@/componen
 import { FounderMessage, Transparency, Partners, SupportCTA, Footer } from "@/components/site/Closing";
 import {
   getDocuments,
+  getHeroSlides,
   getJournal,
   getPartners,
   getPrograms,
@@ -21,7 +22,8 @@ import {
  * halaman ini dirender ulang dengan data terbaru.
  */
 export default async function Home() {
-  const [programs, stats, stories, journal, documents, partners] = await Promise.all([
+  const [heroSlides, programs, stats, stories, journal, documents, partners] = await Promise.all([
+    getHeroSlides(),
     getPrograms(),
     getStats(),
     getStories(),
@@ -34,7 +36,7 @@ export default async function Home() {
     <div className="min-h-screen bg-ivory">
       <Navbar />
       <main>
-        <Hero />
+        <Hero slides={heroSlides} />
         <Intro />
         <AboutFoundation />
         <ProgramList programs={programs} />

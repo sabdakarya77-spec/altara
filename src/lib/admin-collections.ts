@@ -8,20 +8,24 @@
  */
 
 export type Collection =
+  | "hero_slides"
   | "programs"
   | "stories"
   | "stats"
   | "journal"
   | "documents"
-  | "partners";
+  | "partners"
+  | "settings";
 
 export const COLLECTIONS: Collection[] = [
+  "hero_slides",
   "programs",
   "stories",
   "stats",
   "journal",
   "documents",
   "partners",
+  "settings",
 ];
 
 /**
@@ -29,12 +33,14 @@ export const COLLECTIONS: Collection[] = [
  * dari judul bila tidak diberikan.
  */
 export const TABLE_BY_COLLECTION: Record<Collection, string> = {
+  hero_slides: "hero_slides",
   programs: "programs",
   stories: "stories",
   stats: "stats",
   journal: "journal_posts",
   documents: "documents",
   partners: "partners",
+  settings: "settings",
 };
 
 /**
@@ -42,6 +48,17 @@ export const TABLE_BY_COLLECTION: Record<Collection, string> = {
  * Sisanya (id, created_at, updated_at) dikelola server.
  */
 export const WRITABLE: Record<Collection, string[]> = {
+  hero_slides: [
+    "headline",
+    "caption",
+    "location",
+    "image_url",
+    "alt",
+    "object_position",
+    "ken_burns",
+    "sort_order",
+    "published",
+  ],
   programs: ["idx", "title", "slug", "description", "image", "alt", "published", "sort_order"],
   stories: ["category", "title", "slug", "description", "image", "alt", "published", "sort_order"],
   stats: ["idx", "value", "label", "sort_order", "is_placeholder"],
@@ -51,6 +68,7 @@ export const WRITABLE: Record<Collection, string[]> = {
   ],
   documents: ["title", "meta", "file_url", "published", "sort_order"],
   partners: ["name", "logo_url", "published", "sort_order"],
+  settings: ["key", "value"],
 };
 
 /** Apakah `value` adalah kunci koleksi yang dikenal? */

@@ -2,61 +2,16 @@
 
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
-
-/* ─── Data slide (hardcode Sprint 2, akan dipindah ke DB di Sprint 4+) ─── */
-const SLIDES = [
-  {
-    src: "/assets/hero.jpg",
-    alt: "Seorang guru mendampingi anak-anak membaca di ruang kelas sederhana di sebuah desa",
-    location: "Jawa Tengah",
-    headline: "Manunggaling\nKawulane Gusti",
-    caption: "Mendampingi setiap langkah menuju masa depan yang bermartabat",
-    kenBurns: "zoom-in",
-    objectPosition: "center 35%",   // subjek (guru + anak) di sepertiga atas
-  },
-  {
-    src: "/assets/story-feature.jpg",
-    alt: "Perempuan penerima manfaat program pemberdayaan ALTARA tersenyum di depan rumahnya",
-    location: "Yogyakarta",
-    headline: "Satu Keluarga,\nSatu Harapan",
-    caption: "Pemberdayaan dimulai dari kepercayaan yang kita bangun bersama",
-    kenBurns: "pan-left",
-    objectPosition: "center top",    // wajah terpotong di atas — tampilkan dari puncak
-  },
-  {
-    src: "/assets/program-education.jpg",
-    alt: "Anak-anak mengikuti program pendidikan komunitas ALTARA",
-    location: "Jawa Timur",
-    headline: "Pendidikan\nUntuk Semua",
-    caption: "Akses pendidikan yang setara sebagai fondasi perubahan nyata",
-    kenBurns: "zoom-out",
-    objectPosition: "center 40%",   // komposisi kelas, tetap di tengah
-  },
-  {
-    src: "/assets/about.jpg",
-    alt: "Komunitas masyarakat berkumpul bersama relawan ALTARA",
-    location: "Nusantara",
-    headline: "Bersama\nKita Tumbuh",
-    caption: "Dari pelosok desa hingga kota, kami hadir mendampingi",
-    kenBurns: "pan-right",
-    objectPosition: "center 30%",   // foto komunitas, tepatkan di atas tengah
-  },
-  {
-    src: "/assets/program-empowerment.jpg",
-    alt: "Peserta program pemberdayaan ekonomi ALTARA menampilkan hasil karyanya",
-    location: "Jawa Barat",
-    headline: "Mandiri\nBerdaya Bangsa",
-    caption: "Keterampilan nyata yang membuka jalan menuju kemandirian",
-    kenBurns: "zoom-in-slow",
-    objectPosition: "center 45%",   // subjek di tengah, sedikit ke bawah
-  },
-] as const;
+import type { HeroSlide } from "@/data/hero-slides";
+import { DEFAULT_HERO_SLIDES } from "@/data/hero-slides";
 
 const INTERVAL = 6000; // ms
 const FADE_DURATION = 900; // ms — harus selaras dengan CSS transition
 
 /* ─── Komponen utama ─────────────────────────────────────────────────── */
-export function HeroSlider() {
+export function HeroSlider({ slides }: { slides?: HeroSlide[] }) {
+  const activeSlides = slides && slides.length > 0 ? slides : DEFAULT_HERO_SLIDES;
+
   const [current, setCurrent] = useState(0);
   const [prev, setPrev] = useState<number | null>(null);
   const [transitioning, setTransitioning] = useState(false);
@@ -101,13 +56,13 @@ export function HeroSlider() {
   );
 
   const goNext = useCallback(
-    () => goTo((current + 1) % SLIDES.length, "next"),
-    [current, goTo]
+    () => goTo((current + 1) % activeSlides.length, "next"),
+    [current, goTo, activeSlides.length]
   );
 
   const goPrev = useCallback(
-    () => goTo((current - 1 + SLIDES.length) % SLIDES.length, "prev"),
-    [current, goTo]
+    () => goTo((current - 1 + activeSlides.length) % activeSlides.length, "prev"),
+    [current, goTo, activeSlides.length]
   );
 
   /* Autoplay */
@@ -141,7 +96,9 @@ export function HeroSlider() {
     return () => clearTimeout(t);
   }, []);
 
-  const slide = SLIDES[current];
+  // Pastikan current index tidak out-of-bounds jika slides berubah dinamis
+  const safeCurrent = current < activeSlides.length ? current : 0;
+  const slide = activeSlides[safeCurrent] ?? activeSlides[0];
 
   return (
     <div
@@ -153,16 +110,16 @@ export function HeroSlider() {
     >
       {/* ── Layer foto ─────────────────────────────────────────────── */}
       {/* Foto sebelumnya (fade out) */}
-      {prev !== null && (
+      {prev !== null && activeSlides[prev] && (
         <div className="hero-slide hero-slide--out" aria-hidden>
-          <div className={`hero-kb hero-kb--${SLIDES[prev].kenBurns}`}>
+          <div className={`hero-kb hero-kb--${activeSlides[prev].kenBurns}`}>
             <Image
-              src={SLIDES[prev].src}
-              alt={SLIDES[prev].alt}
+              src={activeSlides[prev].imageUrl}
+              alt={activeSlides[prev].alt || ""}
               fill
               sizes="100vw"
               className="object-cover"
-              style={{ objectPosition: SLIDES[prev].objectPosition }}
+              style={{ objectPosition: activeSlides[prev].objectPosition }}
             />
           </div>
         </div>
@@ -170,13 +127,13 @@ export function HeroSlider() {
 
       {/* Foto saat ini (fade in) */}
       <div className="hero-slide hero-slide--in">
-        <div className={`hero-kb hero-kb--${slide.kenBurns}`} key={current}>
+        <div className={`hero-kb hero-kb--${slide.kenBurns}`} key={safeCurrent}>
           <Image
-            src={slide.src}
-            alt={slide.alt}
+            src={slide.imageUrl}
+            alt={slide.alt || ""}
             fill
             sizes="100vw"
-            priority={current === 0}
+            priority={safeCurrent === 0}
             className="object-cover"
             style={{ objectPosition: slide.objectPosition }}
           />
@@ -205,10 +162,14 @@ export function HeroSlider() {
           {/* Eyebrow & Lokasi */}
           <div className="flex items-center gap-2.5">
             <p className="eyebrow text-parchment/70">Tujuan Kami</p>
-            <span className="h-px w-3 bg-parchment/30" aria-hidden />
-            <span className="text-[0.625rem] font-medium uppercase tracking-[0.22em] text-goldsoft">
-              {slide.location}
-            </span>
+            {slide.location ? (
+              <>
+                <span className="h-px w-3 bg-parchment/30" aria-hidden />
+                <span className="text-[0.625rem] font-medium uppercase tracking-[0.22em] text-goldsoft">
+                  {slide.location}
+                </span>
+              </>
+            ) : null}
           </div>
 
           {/* Headline per slide */}
@@ -217,9 +178,11 @@ export function HeroSlider() {
           </h1>
 
           {/* Caption per slide */}
-          <p className="mt-5 max-w-lg text-sm leading-relaxed text-parchment/70 sm:text-base">
-            {slide.caption}
-          </p>
+          {slide.caption ? (
+            <p className="mt-5 max-w-lg text-sm leading-relaxed text-parchment/70 sm:text-base">
+              {slide.caption}
+            </p>
+          ) : null}
 
           {/* CTA */}
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
@@ -266,14 +229,14 @@ export function HeroSlider() {
 
             {/* Dots */}
             <div className="flex items-center gap-2" role="tablist" aria-label="Pilih slide">
-              {SLIDES.map((s, i) => (
+              {activeSlides.map((s, i) => (
                 <button
-                  key={i}
+                  key={s.id ?? i}
                   role="tab"
-                  aria-selected={i === current}
-                  aria-label={`Slide ${i + 1}: ${s.location}`}
+                  aria-selected={i === safeCurrent}
+                  aria-label={`Slide ${i + 1}: ${s.location || ""}`}
                   onClick={() => goTo(i)}
-                  className={`hero-dot ${i === current ? "hero-dot--active" : ""}`}
+                  className={`hero-dot ${i === safeCurrent ? "hero-dot--active" : ""}`}
                 />
               ))}
             </div>
@@ -292,22 +255,24 @@ export function HeroSlider() {
         </div>
       </div>
 
-      {/* ── Caption lokasi ────────────────────────────────────────── */}
-      <div
-        aria-hidden
-        className="hero-location"
-        style={{ opacity: textVisible ? 1 : 0 }}
-      >
-        <span className="inline-block h-px w-4 bg-parchment/40 align-middle" />
-        <span className="ml-2">{slide.location}</span>
-      </div>
+      {/* ── Caption lokasi (desktop corner) ───────────────────────── */}
+      {slide.location ? (
+        <div
+          aria-hidden
+          className="hero-location"
+          style={{ opacity: textVisible ? 1 : 0 }}
+        >
+          <span className="inline-block h-px w-4 bg-parchment/40 align-middle" />
+          <span className="ml-2">{slide.location}</span>
+        </div>
+      ) : null}
 
       {/* ── Progress bar ──────────────────────────────────────────── */}
       {!reducedMotion && (
         <div className="hero-progress-track" aria-hidden>
           <div
             className="hero-progress-fill"
-            style={{ width: paused ? `${progress}%` : `${progress}%` }}
+            style={{ width: `${progress}%` }}
           />
         </div>
       )}

@@ -21,6 +21,66 @@ import {
   stories as seedStories,
 } from "../src/data/content";
 
+const seedHeroSlides = [
+  {
+    image_url: "/assets/hero.jpg",
+    alt: "Seorang guru mendampingi anak-anak membaca di ruang kelas sederhana di sebuah desa",
+    location: "Jawa Tengah",
+    headline: "Manunggaling\nKawulane Gusti",
+    caption: "Mendampingi setiap langkah menuju masa depan yang bermartabat",
+    ken_burns: "zoom-in",
+    object_position: "center 35%",
+  },
+  {
+    image_url: "/assets/story-feature.jpg",
+    alt: "Perempuan penerima manfaat program pemberdayaan ALTARA tersenyum di depan rumahnya",
+    location: "Yogyakarta",
+    headline: "Satu Keluarga,\nSatu Harapan",
+    caption: "Pemberdayaan dimulai dari kepercayaan yang kita bangun bersama",
+    ken_burns: "pan-left",
+    object_position: "center top",
+  },
+  {
+    image_url: "/assets/program-education.jpg",
+    alt: "Anak-anak mengikuti program pendidikan komunitas ALTARA",
+    location: "Jawa Timur",
+    headline: "Pendidikan\nUntuk Semua",
+    caption: "Akses pendidikan yang setara sebagai fondasi perubahan nyata",
+    ken_burns: "zoom-out",
+    object_position: "center 40%",
+  },
+  {
+    image_url: "/assets/about.jpg",
+    alt: "Komunitas masyarakat berkumpul bersama relawan ALTARA",
+    location: "Nusantara",
+    headline: "Bersama\nKita Tumbuh",
+    caption: "Dari pelosok desa hingga kota, kami hadir mendampingi",
+    ken_burns: "pan-right",
+    object_position: "center 30%",
+  },
+  {
+    image_url: "/assets/program-empowerment.jpg",
+    alt: "Peserta program pemberdayaan ekonomi ALTARA menampilkan hasil karyanya",
+    location: "Jawa Barat",
+    headline: "Mandiri\nBerdaya Bangsa",
+    caption: "Keterampilan nyata yang membuka jalan menuju kemandirian",
+    ken_burns: "zoom-in-slow",
+    object_position: "center 45%",
+  },
+];
+
+const seedSettings: Record<string, string> = {
+  contact_whatsapp: "+62 812-3456-7890",
+  contact_email: "halo@altara.or.id",
+  office_address: "Jakarta · Yogyakarta · Kupang",
+  bank_name: "Bank Mandiri",
+  bank_account_no: "137-00-1234567-8",
+  bank_account_holder: "Yayasan Abdi Laksata Raya",
+  social_instagram: "https://instagram.com/altara.or.id",
+  social_youtube: "https://youtube.com/@altara",
+  social_linkedin: "https://linkedin.com/company/altara",
+};
+
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
   console.error("DATABASE_URL belum diset.");
@@ -129,6 +189,32 @@ async function main() {
         [name, i]
       );
     }
+  }
+
+  // Hero Slides — insert-only jika headline belum ada
+  for (let i = 0; i < seedHeroSlides.length; i++) {
+    const hs = seedHeroSlides[i];
+    const existing = await client.query<{ id: number }>(
+      "SELECT id FROM hero_slides WHERE headline = $1",
+      [hs.headline]
+    );
+    if (existing.rows.length === 0) {
+      await client.query(
+        `INSERT INTO hero_slides (headline, caption, location, image_url, alt, object_position, ken_burns, sort_order, published)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true)`,
+        [hs.headline, hs.caption, hs.location, hs.image_url, hs.alt, hs.object_position, hs.ken_burns, i]
+      );
+    }
+  }
+
+  // Settings — insert-only bila key belum ada
+  for (const [key, value] of Object.entries(seedSettings)) {
+    await client.query(
+      `INSERT INTO settings (key, value)
+       VALUES ($1, $2)
+       ON CONFLICT (key) DO NOTHING`,
+      [key, value]
+    );
   }
 
   console.log("Selesai.");

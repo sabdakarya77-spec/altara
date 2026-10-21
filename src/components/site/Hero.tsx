@@ -1,15 +1,15 @@
+import type { HeroSlide } from "@/lib/queries";
 import { HeroSlider } from "./HeroSlider";
 
 /**
  * Hero section — shell server component.
- * Semua state dan animasi ada di HeroSlider (client component).
- * Dipisah agar page.tsx tetap bisa fetch data di server tanpa
- * menarik seluruh slider ke server bundle.
+ * Menerima `slides` dari database (via page.tsx) dan meneruskannya
+ * ke HeroSlider (client component).
  */
-export function Hero() {
+export function Hero({ slides }: { slides?: HeroSlide[] }) {
   return (
     <section id="top" aria-label="Hero">
-      <HeroSlider />
+      <HeroSlider slides={slides} />
     </section>
   );
 }

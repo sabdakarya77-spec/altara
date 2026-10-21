@@ -44,6 +44,34 @@ export type CollectionConfig = {
 
 export const COLLECTIONS: CollectionConfig[] = [
   {
+    key: "hero_slides",
+    label: "Hero Slider",
+    titleColumn: "headline",
+    fields: [
+      { column: "image_url", label: "Foto Slide", type: "image", inTable: true, required: true },
+      { column: "headline", label: "Judul Slide", type: "textarea", rows: 2, inTable: true, required: true },
+      { column: "caption", label: "Keterangan (Caption)", type: "textarea", rows: 3 },
+      { column: "location", label: "Lokasi", type: "text", inTable: true, hint: "Contoh: Jawa Tengah, Yogyakarta" },
+      { column: "alt", label: "Deskripsi Foto (Alt)", type: "text", hint: "Deskripsi foto untuk aksesibilitas pembaca layar" },
+      {
+        column: "object_position",
+        label: "Posisi Fokus Foto",
+        type: "select",
+        options: ["center 35%", "center top", "center 40%", "center 30%", "center 45%", "center center", "top center", "bottom center"],
+        hint: "Menentukan titik fokus foto agar tidak terpotong canggung saat di-crop",
+      },
+      {
+        column: "ken_burns",
+        label: "Efek Animasi (Ken Burns)",
+        type: "select",
+        options: ["zoom-in", "zoom-out", "pan-left", "pan-right", "zoom-in-slow"],
+        hint: "Gaya gerakan sinematik yang berjalan perlahan pada slide ini",
+      },
+      { column: "published", label: "Aktif", type: "boolean", inTable: true },
+      { column: "sort_order", label: "Urutan", type: "number", inTable: true },
+    ],
+  },
+  {
     key: "stats",
     label: "Statistik Dampak",
     titleColumn: "label",

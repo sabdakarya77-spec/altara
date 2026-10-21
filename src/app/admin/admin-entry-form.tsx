@@ -31,7 +31,13 @@ export function valuesFromRow(row: Record<string, unknown>, fields: Field[]): Fo
 
 export function emptyValues(fields: Field[]): FormValues {
   const values: FormValues = {};
-  for (const field of fields) values[field.column] = "";
+  for (const field of fields) {
+    if (field.type === "select" && field.options && field.options.length > 0) {
+      values[field.column] = field.options[0];
+    } else {
+      values[field.column] = "";
+    }
+  }
   return values;
 }
 
@@ -131,6 +137,20 @@ function FieldInput({
           disabled={disabled}
           className={inputClass}
         />
+      ) : field.type === "select" ? (
+        <select
+          id={`field-${field.column}`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className={inputClass}
+        >
+          {field.options?.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
       ) : (
         <input
           id={`field-${field.column}`}

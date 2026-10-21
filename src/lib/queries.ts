@@ -346,3 +346,44 @@ export async function getJournalBySlug(slug: string): Promise<JournalPost | null
     sortOrder: r.sort_order,
   };
 }
+
+/* ─── Hero Slides (Beranda) ─────────────────────────────────────────── */
+
+export type { HeroSlide } from "@/data/hero-slides";
+export { DEFAULT_HERO_SLIDES } from "@/data/hero-slides";
+import { DEFAULT_HERO_SLIDES, type HeroSlide } from "@/data/hero-slides";
+
+type HeroSlideRow = {
+  id: number;
+  headline: string;
+  caption: string;
+  location: string;
+  image_url: string;
+  alt: string;
+  object_position: string;
+  ken_burns: string;
+  sort_order: number;
+  published: boolean;
+};
+
+export async function getHeroSlides(): Promise<HeroSlide[]> {
+  const rows = await queryMaybe<HeroSlideRow>(
+    "SELECT * FROM hero_slides WHERE published ORDER BY sort_order, id"
+  );
+  if (!rows || rows.length === 0) {
+    return DEFAULT_HERO_SLIDES;
+  }
+  return rows.map((r) => ({
+    id: r.id,
+    headline: r.headline,
+    caption: r.caption,
+    location: r.location,
+    imageUrl: r.image_url,
+    alt: r.alt,
+    objectPosition: r.object_position || "center 35%",
+    kenBurns: r.ken_burns || "zoom-in",
+    published: r.published,
+    sortOrder: r.sort_order,
+  }));
+}
+
