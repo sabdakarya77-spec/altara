@@ -31,7 +31,9 @@ const nextConfig = {
   images: {
     // Semua aset visual bersifat lokal (public/assets + /uploads).
     // Konversi AVIF/WebP lewat optimizer bawaan Next.
-    formats: ["image/avif", "image/webp"],
+    // AVIF dihapus sementara — advisory RCE di Next 14.x Image Optimizer
+    // menyebut format ini. Aktifkan kembali setelah upgrade ke Next 15.x.
+    formats: ["image/webp"],
     remotePatterns: [],
   },
 

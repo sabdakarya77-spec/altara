@@ -12,7 +12,9 @@ import Image from "next/image";
 export default function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") ?? "/admin";
+  const rawNext = searchParams.get("next") ?? "";
+  // Izinkan hanya path internal: harus diawali "/" dan tidak "//" (protocol-relative URL).
+  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/admin";
 
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

@@ -140,9 +140,14 @@ request, padahal situs masih bisa menyajikan fallback statis.
 ```
 src/
   app/
-    layout.tsx        # metadata, favicon (/icon.png), link Google Fonts
-    page.tsx          # komposisi landing page
+    layout.tsx        # metadata, favicon (/icon.png), link Google Fonts, JSON-LD NGO
+    page.tsx          # komposisi landing page (HeroSlider + 13 section)
+    sitemap.ts        # sitemap XML dinamis
+    robots.ts         # panduan crawler robots.txt
     globals.css       # utility komponen (.shell, .eyebrow, .reveal, .hairline, ...)
+    program/[slug]/   # halaman detail publik program
+    cerita/[slug]/    # halaman detail publik cerita dampak
+    jurnal/[slug]/    # halaman detail publik artikel jurnal
     admin/
       page.tsx        # panel admin — merender AdminDashboard
       admin-dashboard.tsx  # shell: sidebar, header, state CRUD
@@ -162,8 +167,9 @@ src/
     ready/route.ts    # GET  — readiness (503 bila database mati)
     uploads/[...path]/route.ts  # menyajikan berkas hasil upload
   components/site/
-    Navbar.tsx        # header fixed + menu seluler
-    Hero.tsx          # hero image + CTA
+    Navbar.tsx        # header fixed + mobile overlay murni (solid bg-ivory)
+    HeroSlider.tsx    # hero slider dinamis (Ken Burns, fade, 100svh mobile)
+    Hero.tsx          # fallback hero statis
     Sections.tsx      # Intro, AboutFoundation, ProgramList
     Impact.tsx        # ImpactStats, StoryFeature, StoryGrid, JournalSection
     Closing.tsx       # FounderMessage, Transparency, Partners, SupportCTA, Footer
@@ -190,6 +196,7 @@ next.config.mjs       # output: "standalone" + external packages
 .npmrc                # node-linker=hoisted (wajib untuk standalone)
 public/
   icon.png            # favicon
+  og-image.jpg        # OpenGraph default image
   assets/             # foto program, cerita, jurnal, logo
 docs/
   MASTERPLAN_ALTARA.md # SSOT apa yang ada sekarang

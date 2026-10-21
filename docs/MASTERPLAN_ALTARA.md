@@ -1,6 +1,6 @@
 # MASTERPLAN ALTARA — Foundations of the Current Build
 
-> **Status:** FACTUAL — mirror of the code as of 2026-10-21.
+> **Status:** FACTUAL — mirror of the code as of 2026-10-22.
 > **Role:** SSOT for *what exists*. Planning lives in [`ROADMAP.md`](./ROADMAP.md).
 > **Rule:** this file describes reality. If code and this file disagree, the code wins — fix this file in the same commit.
 
@@ -84,21 +84,28 @@ Dev dependencies: `typescript`, `@types/*`, `postcss`, `tailwindcss`, `eslint`, 
 altara-app/
 ├─ src/
 │  ├─ app/
-│  │  ├─ layout.tsx          # metadata, Google Fonts, <html lang="id">
+│  │  ├─ layout.tsx          # metadata, Google Fonts, canonical, OG, JSON-LD NGO, <html lang="id">
 │  │  ├─ page.tsx            # komposisi beranda (14 komponen)
-│  │  ├─ globals.css         # utilities + tokens CSS
+│  │  ├─ sitemap.ts          # sitemap dinamis (halaman statis + slug program/cerita/jurnal)
+│  │  ├─ robots.ts           # robots.txt (crawlable public, disallow /admin, /api/, /uploads/)
+│  │  ├─ globals.css         # utilities + tokens CSS + hero slider styles
+│  │  ├─ program/[slug]/     # route detail publik program (SSG + metadata dinamis)
+│  │  ├─ cerita/[slug]/      # route detail publik cerita (SSG + metadata dinamis)
+│  │  ├─ jurnal/[slug]/      # route detail publik jurnal (SSG + metadata dinamis)
 │  │  └─ admin/              # panel admin (shell client + login)
 │  ├─ components/site/
-│  │  ├─ Navbar.tsx          # header fixed + menu seluler
-│  │  ├─ Hero.tsx            # hero image + CTA
+│  │  ├─ Navbar.tsx          # header fixed + mobile overlay murni (solid bg-ivory)
+│  │  ├─ HeroSlider.tsx      # hero slider (Ken Burns, fade transition, autoplay, 100svh mobile)
+│  │  ├─ Hero.tsx            # hero fallback
 │  │  ├─ Sections.tsx        # Intro, AboutFoundation, ProgramList
 │  │  ├─ Impact.tsx          # ImpactStats, StoryFeature, StoryGrid, JournalSection
 │  │  ├─ Closing.tsx         # FounderMessage, Transparency, Partners, SupportCTA, Footer
-│  │  └─ primitives.tsx      # Reveal, SectionHeader, Emblem, Lockup, useReveal
+│  │  └─ primitives.tsx      # Reveal, SectionHeader, Emblem, Lockup (responsif mobile), useReveal
 │  ├─ data/content.ts        # konten statis (fallback bila DB tidak tersedia)
-│  └─ lib/                   # db, queries, auth, storage, image, slug, admin-collections
+│  └─ lib/                   # db, queries (get* & get*BySlug), auth, storage, image, slug, admin-collections
 ├─ public/
 │  ├─ icon.png               # favicon
+│  ├─ og-image.jpg           # OpenGraph image kanonik
 │  └─ assets/                # 18 aset gambar (sekitar 4,4 MB)
 └─ docs/
    ├─ MASTERPLAN_ALTARA.md   # dokumen ini
@@ -115,13 +122,18 @@ altara-app/
 | Route | Rendering | Isi |
 | --- | --- | --- |
 | `/` | SSG + revalidasi | Beranda: 14 section dalam satu halaman |
-| `/admin` | Client component | Panel admin 6 koleksi (data dari PostgreSQL)
+| `/program/[slug]` | SSG dinamis | Halaman detail program dengan foto hero dan metadata |
+| `/cerita/[slug]` | SSG dinamis | Halaman detail cerita dampak dengan metadata artikel |
+| `/jurnal/[slug]` | SSG dinamis | Halaman baca artikel jurnal dengan metadata artikel |
+| `/sitemap.xml` | Server metadata | Peta situs XML dinamis dari static routes + konten DB |
+| `/robots.txt` | Server metadata | Panduan crawler: indeks publik, proteksi admin/uploads |
+| `/admin` | Client component | Panel admin 6 koleksi (data dari PostgreSQL) |
 
 ### Anchor di beranda (8)
 
 | Anchor | Komponen | Section |
 | --- | --- | --- |
-| `#top` | `Hero.tsx` | Hero (latar `ink`) |
+| `#top` | `HeroSlider.tsx` | Hero slider sinematik 5 slide (latar `ink`, 100svh mobile) |
 | `#tentang` | `Sections.tsx` | `AboutFoundation` — Tentang yayasan |
 | `#program` | `Sections.tsx` | `ProgramList` — 4 kartu program |
 | `#dampak` | `Impact.tsx` | `ImpactStats` — Statistik dampak |
@@ -130,9 +142,7 @@ altara-app/
 | `#transparansi` | `Closing.tsx` | `Transparency` — Dokumen dan laporan |
 | `#dukung` | `Closing.tsx` | `SupportCTA` — CTA dukungan |
 
-Navigasi navbar: Tentang, Program, Dampak, Cerita, Jurnal, Transparansi — semuanya menuju anchor. Tombol aksi menuju `#dukung`. Menu mobile memakai overlay `fixed inset-0 z-40 bg-ivory`.
-
-Belum ada route terpisah per halaman. Belum ada `sitemap.xml` maupun `robots.txt`.
+Navigasi navbar: Tentang, Program, Dampak, Cerita, Jurnal, Transparansi — semuanya menuju anchor. Tombol aksi menuju `#dukung`. Menu mobile memakai overlay mandiri `fixed inset-0 z-40 bg-[#F5F2EC]` solid bebas dari efek pembatasan header. Lockup menampilkan wordmark ALTARA dan subtitle Abdi Laksata Raya di mobile dan desktop.
 
 ---
 
@@ -248,6 +258,9 @@ Berkas pendukung: `Dockerfile`, `Caddyfile`, `.dockerignore`, `.npmrc` (`node-li
 | 8 | 2026-10-21 | **Container adalah target deployment**; VM/host Proxmox hanya tempat menjalankan Docker | Seluruh stack (app, db, caddy, migrate) sudah berada di `docker-compose.yml`; VM bukan syarat arsitektur |
 | 9 | 2026-10-21 | `.npmrc` memakai `node-linker=hoisted` | Build `output: "standalone"` gagal dengan `EPERM ... symlink` saat Next menelusuri symlink `node_modules` milik pnpm; layout hoisted juga menjamin `pg` dan `sharp` ikut tersalin |
 | 10 | 2026-10-21 | Health check dipecah: `/api/health` (liveness) dan `/api/ready` (readiness) | Caddy memakai liveness sebagai `health_uri` — memakai readiness akan menolak semua traffic saat DB mati, padahal situs masih bisa menyajikan fallback statis |
+| 11 | 2026-10-22 | Hero Slider ultra modern menggantikan hero statis | Ken Burns CSS fade, 5 slide terkurasi, autoplay 6s dengan pause on hover/focus, `prefers-reduced-motion` compliance, objectPosition per slide |
+| 12 | 2026-10-22 | Implementasi SEO & Route Publik Dinamis | Canonical URL, OG 1200x630, JSON-LD NGO schema, `sitemap.ts`, `robots.ts`, dan route publik dinamis `/program/[slug]`, `/cerita/[slug]`, `/jurnal/[slug]` |
+| 13 | 2026-10-22 | Pemisahan Mobile Menu Overlay & Perapian Mobile Hero | Mengeluarkan fixed mobile menu dari header ber-`backdrop-blur` agar latar `#F5F2EC` solid dan tidak tembus; menampilkan "Abdi Laksata Raya" di mobile Lockup; hero mobile 100svh dan lokasi disematkan di eyebrow |
 
 ---
 

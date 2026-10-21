@@ -88,7 +88,7 @@ export function Lockup({
           ALTARA
         </span>
         <span
-          className={`mt-1 hidden text-[0.6rem] uppercase tracking-[0.2em] sm:block ${
+          className={`mt-0.5 block text-[0.55rem] uppercase tracking-[0.18em] sm:text-[0.6rem] sm:tracking-[0.2em] leading-none ${
             isLight ? "text-parchment/70" : "text-muted"
           }`}
         >

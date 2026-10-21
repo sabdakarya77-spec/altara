@@ -282,3 +282,67 @@ export async function getPartners(includeDrafts = false): Promise<Partner[]> {
     sortOrder: r.sort_order,
   }));
 }
+
+/* ─── Fetch tunggal by slug (untuk route publik) ──────────────────────── */
+
+export async function getProgramBySlug(slug: string): Promise<Program | null> {
+  const rows = await queryMaybe<ProgramRow>(
+    "SELECT * FROM programs WHERE slug = $1 AND published LIMIT 1",
+    [slug]
+  );
+  if (!rows || rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    index: r.idx,
+    title: r.title,
+    slug: r.slug,
+    description: r.description,
+    image: r.image,
+    alt: r.alt,
+    published: r.published,
+    sortOrder: r.sort_order,
+  };
+}
+
+export async function getStoryBySlug(slug: string): Promise<Story | null> {
+  const rows = await queryMaybe<StoryRow>(
+    "SELECT * FROM stories WHERE slug = $1 AND published LIMIT 1",
+    [slug]
+  );
+  if (!rows || rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    category: r.category,
+    title: r.title,
+    slug: r.slug,
+    description: r.description,
+    image: r.image,
+    alt: r.alt,
+    published: r.published,
+    sortOrder: r.sort_order,
+  };
+}
+
+export async function getJournalBySlug(slug: string): Promise<JournalPost | null> {
+  const rows = await queryMaybe<JournalRow>(
+    "SELECT * FROM journal_posts WHERE slug = $1 AND published LIMIT 1",
+    [slug]
+  );
+  if (!rows || rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    category: r.category,
+    title: r.title,
+    slug: r.slug,
+    excerpt: r.excerpt,
+    body: r.body,
+    image: r.cover_image,
+    alt: r.alt,
+    date: r.published_at ? formatDateId(r.published_at) : "",
+    published: r.published,
+    sortOrder: r.sort_order,
+  };
+}

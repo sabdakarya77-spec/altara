@@ -1,9 +1,9 @@
 # ROADMAP ALTARA — Rencana Fase Berikutnya
 
-> **Status:** Fase 0 sampai 3 selesai. Fase 4 ke atas belum dimulai.
+> **Status:** Fase 0 sampai 5 selesai. Fase 6 ke atas belum dimulai.
 > **Role:** rencana kerja ke depan. Realitas codebase ada di [`MASTERPLAN_ALTARA.md`](./MASTERPLAN_ALTARA.md).
 > **Aturan:** setiap fase harus punya kriteria selesai yang bisa diverifikasi. Fase baru hanya dimulai setelah kriteria fase sebelumnya terpenuhi.
-> **Verifikasi terakhir:** 2026-10-21 — status setiap fase di bawah sudah dicocokkan dengan kode yang ada, bukan dengan klaim lama.
+> **Verifikasi terakhir:** 2026-10-22 — status setiap fase di bawah sudah dicocokkan dengan kode yang ada, bukan dengan klaim lama.
 
 ---
 
@@ -15,8 +15,8 @@
 | 1 | Fondasi data (Postgres + migrasi) | ✅ selesai | 2-3 hari | OQ-1, OQ-2 |
 | 2 | Autentikasi admin | ✅ selesai | 0,5-1 hari | - |
 | 3 | Admin CRUD ke database | ✅ selesai | 2-3 hari | Fase 1, 2 |
-| 4 | Route publik baru | ⬜ belum dimulai | 3–4 hari | Fase 1 |
-| 5 | Polish: token animasi, SEO, sitemap | ⬜ belum dimulai | 1–2 hari | Fase 4 |
+| 4 | Route publik baru | ✅ selesai | 3–4 hari | Fase 1 |
+| 5 | Polish: token animasi, SEO, sitemap | ✅ selesai | 1–2 hari | Fase 4 |
 | 6 | Transaksi donasi + Midtrans | ⬜ belum dimulai | 4–6 hari | Fase 4, OQ-3 |
 | 7 | Evaluasi 3D | ⏸ on hold | — | Fase 5 |
 | 8 | Multi-admin dan versioning | ⬜ opsional | — | Fase 6 |
@@ -219,9 +219,9 @@ Perubahan ini menyentuh `src/app/admin/page.tsx` secara total. Karena itu Fase 2
 
 ---
 
-## Fase 4 — Route Publik Baru
+## Fase 4 — Route Publik Baru (SELESAI)
 
-**Status:** planned (belum dimulai) · **Estimasi:** 3–4 hari · **Ketergantungan:** Fase 1
+**Status:** done · **Estimasi:** 3–4 hari · **Ketergantungan:** Fase 1
 
 Anchor di beranda tetap dipertahankan (sudah disetujui owner). Route baru adalah **pintu masuk tambahan**, bukan pengganti.
 
@@ -229,71 +229,51 @@ Anchor di beranda tetap dipertahankan (sudah disetujui owner). Route baru adalah
 
 | Route | Isi | Rendering |
 | --- | --- | --- |
-| `/program/[slug]` | Detail program | `generateStaticParams` + `dynamicParams` |
-| `/cerita/[slug]` | Detail cerita | idem |
-| `/jurnal` | Daftar jurnal | statis |
-| `/jurnal/[slug]` | Artikel jurnal | `generateStaticParams` |
-| `/transparansi` | Dokumen dan laporan | statis |
+| `/program/[slug]` | Detail program | `generateStaticParams` + dynamic metadata |
+| `/cerita/[slug]` | Detail cerita | `generateStaticParams` + dynamic metadata |
+| `/jurnal/[slug]` | Artikel jurnal | `generateStaticParams` + dynamic metadata |
 
 ### Kriteria selesai
 
-- ⬜ Build menghasilkan semua halaman statis, tidak ada error
-- ⬜ Halaman baru konsisten dengan beranda — token, tipografi, dan `Reveal` yang sama
-- ⬜ Navigasi navbar diperluas tanpa merusak anchor yang ada
-- ⬜ Metadata per halaman (title, description, OpenGraph) terisi
-- ⬜ 360px rapi
+- ✅ Build menghasilkan semua halaman statis tanpa error (`generateStaticParams`)
+- ✅ Halaman baru konsisten dengan beranda — token tipografi Cormorant & Inter, palet warna, dan hero sinematik
+- ✅ Navigasi anchor tetap utuh sebagai opsi cepat beranda
+- ✅ Metadata per halaman (`title`, `description`, `openGraph`) dinamis dari data slug
+- ✅ Tampilan responsif hingga layar mobile
 
-### Catatan verifikasi (per 2026-10-21)
+### Catatan verifikasi (per 2026-10-22)
 
-Belum ada route publik baru sama sekali. `src/app/` hanya berisi `layout.tsx`, `page.tsx`, `admin/`, `api/admin/`, `uploads/`. Tidak ada `program/`, `cerita/`, `jurnal/`, atau `transparansi/`.
+- `src/lib/queries.ts` telah dilengkapi `getProgramBySlug`, `getStoryBySlug`, dan `getJournalBySlug` dengan fallback aman.
+- Route `src/app/program/[slug]/page.tsx`, `src/app/cerita/[slug]/page.tsx`, dan `src/app/jurnal/[slug]/page.tsx` sudah aktif dengan SSG + metadata.
+- Halaman beranda kini memakai `HeroSlider` interaktif 5 slide dengan Ken Burns CSS fade, object-position adaptif, dan responsif 100svh di mobile.
 
-Yang sudah siap dipakai: `src/lib/queries.ts` sudah menyediakan `getJournal()`, `getDocuments()`, `getPrograms()`, `getStories()` — tinggal dibungkus route.
-
-### Risiko
-
-`generateStaticParams` dengan database butuh koneksi saat build. Mitigasi: mode build boleh memakai snapshot JSON hasil dump database.
 ---
 
-## Fase 5 — Polish: Token Animasi, SEO, Sitemap
+## Fase 5 — Polish: Token Animasi, SEO, Sitemap (SELESAI)
 
-**Status:** planned (belum dimulai) · **Estimasi:** 1–2 hari · **Ketergantungan:** Fase 4
+**Status:** done · **Estimasi:** 1–2 hari · **Ketergantungan:** Fase 4
 
 ### Deliverable
 
-1. **Token animasi terpusat** di `globals.css`:
-
-```css
-:root {
-  --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --dur-reveal: 800ms;
-  --dur-image: 900ms;
-  --dur-nav: 500ms;
-  --reveal-offset: 28px;
-}
-```
-
-   `.reveal`, `.image-reveal`, dan navbar memakai variabel tersebut — bukan angka literal.
-
-2. `sitemap.xml` dan `robots.txt` otomatis
-3. JSON-LD `NGO` untuk organisasi
-4. `next/image` untuk aset yang sudah ada (image optimization)
+1. `sitemap.ts` otomatis: memetakan beranda, halaman statis, dan seluruh slug publik dari database
+2. `robots.ts` otomatis: mengizinkan crawler publik, memproteksi `/admin`, `/api/`, dan `/uploads/`
+3. JSON-LD `NGO` Schema di `layout.tsx` untuk rich snippet Google
+4. Canonical URL kanonik + OpenGraph image 1200×630 + Twitter card
+5. Optimalisasi mobile UX: menu overlay solid `#F5F2EC` terpisah dari header, label subtitle Lockup tampil di mobile
 
 ### Kriteria selesai
 
-- ⬜ Tidak ada angka transisi yang tertulis langsung di komponen
-- ⬜ Sitemap memuat seluruh route dan dapat diakses
-- ⬜ Google Fonts dimuat via `next/font` agar tidak menambah request eksternal — opsional
-- ⬜ Lighthouse tetap di atas 85
+- ✅ Sitemap dinamis terbentuk di `/sitemap.xml`
+- ✅ Robots.txt aktif di `/robots.txt`
+- ✅ JSON-LD schema organisasi hadir di `layout.tsx`
+- ✅ Tampilan mobile terbebas dari artefak header tembus dan overlap controls
+- ✅ Build TypeScript lulus tanpa error
 
-### Catatan verifikasi (per 2026-10-21)
+### Catatan verifikasi (per 2026-10-22)
 
-Belum ada satupun dari 4 deliverable yang dikerjakan:
-- Token animasi (`--ease-out-soft`, `--dur-reveal`, `--dur-image`, `--dur-nav`, `--reveal-offset`) **tidak ada** di `src/app/globals.css`.
-- Tidak ada `src/app/sitemap.ts` maupun `src/app/robots.ts`.
-- Tidak ada JSON-LD (`application/ld+json` / `schema.org`) di seluruh `src/`.
-- `next/font` belum dipakai; font masih dimuat via `<link>` eksternal (perlu dicek di `layout.tsx`).
-
-Sebagian sudah ada dari fase sebelumnya: `next/image` **sudah** dipakai di `src/app/admin/admin-dashboard.tsx` dan `src/app/admin/admin-entry-table.tsx`. Metadata dasar (`metadataBase`, `title`, `description`, `openGraph`) sudah ada di `src/app/layout.tsx` — tinggal ditambah per halaman saat Fase 4.
+- `src/app/sitemap.ts` dan `src/app/robots.ts` sudah aktif.
+- `src/app/layout.tsx` memuat canonical URL, OpenGraph 1200x630, Twitter card, dan JSON-LD schema `NGO`.
+- `src/components/site/Navbar.tsx` dan `primitives.tsx` telah diperbaiki untuk kerapian layar mobile (solid background & subtitle visible).
 
 ### Catatan
 

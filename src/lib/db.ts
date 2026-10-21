@@ -32,7 +32,7 @@ function createPool(): Pool | null {
     console.error("[db] pool error:", err.message);
   });
 
-  if (process.env.NODE_ENV !== "production") globalForDb.altaraPool = pool;
+  globalForDb.altaraPool = pool; // cache tanpa syarat — production maupun development
   return pool;
 }
 
