@@ -24,6 +24,7 @@ export type OverviewMetrics = {
   documents: { total: number; published: number };
   partners: { total: number; published: number };
   stats: { total: number; verified: number };
+  donations?: { total: number; pending: number; settlement: number };
 };
 
 export type RecentItem = {
@@ -61,6 +62,7 @@ export async function GET() {
       documents: { total: seedDocuments.length, published: seedDocuments.length },
       partners: { total: seedPartners.length, published: seedPartners.length },
       stats: { total: seedStats.length, verified: 0 },
+      donations: { total: 0, pending: 0, settlement: 0 },
     };
 
     const recentEntries: RecentItem[] = [
@@ -104,6 +106,7 @@ export async function GET() {
       docsRes,
       partnersRes,
       statsRes,
+      donationsRes,
       recentRes,
     ] = await Promise.all([
       pool.query<{ count: string; published: string }>(
@@ -129,6 +132,9 @@ export async function GET() {
       ),
       pool.query<{ count: string; verified: string }>(
         "SELECT COUNT(*)::text AS count, COUNT(*) FILTER (WHERE NOT is_placeholder)::text AS verified FROM stats"
+      ),
+      pool.query<{ count: string; pending: string; settlement: string }>(
+        "SELECT COUNT(*)::text AS count, COUNT(*) FILTER (WHERE status = 'pending')::text AS pending, COUNT(*) FILTER (WHERE status = 'settlement')::text AS settlement FROM donations"
       ),
       pool.query<{ type: "program" | "story" | "journal" | "campaign"; title: string; slug: string; published: boolean; updated_at: Date }>(`
         SELECT 'journal' AS type, title, slug, published, updated_at FROM journal_posts
@@ -174,6 +180,11 @@ export async function GET() {
       stats: {
         total: Number(statsRes.rows[0]?.count ?? 0),
         verified: Number(statsRes.rows[0]?.verified ?? 0),
+      },
+      donations: {
+        total: Number(donationsRes.rows[0]?.count ?? 0),
+        pending: Number(donationsRes.rows[0]?.pending ?? 0),
+        settlement: Number(donationsRes.rows[0]?.settlement ?? 0),
       },
     };
 

@@ -73,3 +73,56 @@ export function recordFailedAttempt(ip: string): void {
 export function resetAttempts(ip: string): void {
   store.delete(ip);
 }
+
+/**
+ * Rate limiter generik untuk endpoint publik (misalnya: pembuatan donasi).
+ * Membatasi jumlah request per identitas (IP + prefix endpoint) dalam jendela waktu tertentu.
+ */
+const publicStore = new Map<string, Entry>();
+
+function purgePublic(): void {
+  const now = Date.now();
+  Array.from(publicStore.entries()).forEach(([key, entry]) => {
+    if (entry.resetAt <= now) publicStore.delete(key);
+  });
+}
+
+export function checkPublicRateLimit(
+  identifier: string,
+  maxRequests = 10,
+  windowMs = 10 * 60 * 1000 // default 10 menit
+): { allowed: true } | { allowed: false; retryAfterSec: number } {
+  if (publicStore.size > 1000) purgePublic();
+
+  const now = Date.now();
+  const entry = publicStore.get(identifier);
+
+  if (!entry || entry.resetAt <= now) {
+    publicStore.set(identifier, { count: 1, resetAt: now + windowMs });
+    return { allowed: true };
+  }
+
+  if (entry.count >= maxRequests) {
+    const retryAfterSec = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+    return { allowed: false, retryAfterSec };
+  }
+
+  entry.count += 1;
+  return { allowed: true };
+}
+
+/**
+ * Ekstraksi IP klien secara aman dari header HTTP request.
+ */
+export function getClientIp(request: { headers: Headers }): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const firstIp = forwarded.split(",")[0]?.trim();
+    if (firstIp) return firstIp;
+  }
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp?.trim()) return realIp.trim();
+  const cfIp = request.headers.get("cf-connecting-ip");
+  if (cfIp?.trim()) return cfIp.trim();
+  return "127.0.0.1";
+}

@@ -317,10 +317,12 @@ export default function AdminDashboard() {
                 <p className="mt-2 max-w-2xl text-sm text-muted">
                   {activeKey === "settings"
                     ? "Kelola identitas kontak yayasan, nomor rekening donasi resmi, dan media sosial resmi."
+                    : activeKey === "donations"
+                    ? "Daftar transaksi donasi yang masuk. Cocokkan kode dan nominal dengan mutasi bank resmi yayasan, lalu klik Ubah untuk memverifikasi status ke settlement."
                     : "Perubahan tersimpan langsung di Postgres dan tampil di situs publik."}
                 </p>
               </div>
-              {activeKey !== "settings" ? (
+              {activeKey !== "settings" && activeKey !== "donations" ? (
                 <button
                   onClick={openCreate}
                   className="rounded-md bg-ink px-4 py-2 text-sm text-parchment transition-colors hover:bg-forest"

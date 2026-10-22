@@ -10,6 +10,7 @@
 export type Collection =
   | "hero_slides"
   | "campaigns"
+  | "donations"
   | "programs"
   | "stories"
   | "stats"
@@ -20,6 +21,7 @@ export type Collection =
 export const COLLECTIONS: Collection[] = [
   "hero_slides",
   "campaigns",
+  "donations",
   "programs",
   "stories",
   "stats",
@@ -35,6 +37,7 @@ export const COLLECTIONS: Collection[] = [
 export const TABLE_BY_COLLECTION: Record<Collection, string> = {
   hero_slides: "hero_slides",
   campaigns: "campaigns",
+  donations: "donations",
   programs: "programs",
   stories: "stories",
   stats: "stats",
@@ -76,6 +79,7 @@ export const WRITABLE: Record<Collection, string[]> = {
     "featured",
     "sort_order",
   ],
+  donations: ["status", "payment_method", "message"],
   programs: ["idx", "title", "slug", "description", "image", "alt", "published", "sort_order"],
   stories: ["category", "title", "slug", "description", "image", "alt", "published", "sort_order"],
   stats: ["idx", "value", "label", "sort_order", "is_placeholder"],

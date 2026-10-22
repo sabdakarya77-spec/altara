@@ -30,6 +30,7 @@ export function EntryTable({
     if (collectionKey === "programs" && row.slug) return `/program/${row.slug}`;
     if (collectionKey === "stories" && row.slug) return `/cerita/${row.slug}`;
     if (collectionKey === "journal" && row.slug) return `/jurnal/${row.slug}`;
+    if (collectionKey === "campaigns" && row.slug) return `/donasi/${row.slug}`;
     if (collectionKey === "hero_slides") return "/";
     if (collectionKey === "stats") return "/#dampak";
     if (collectionKey === "documents") {
@@ -124,7 +125,70 @@ export function EntryTable({
 function CellValue({ field, row }: { field: Field; row: Row }) {
   const raw = row[field.column];
 
+  if (field.column === "status") {
+    const statusVal = String(raw || "pending");
+    if (statusVal === "settlement") {
+      return (
+        <span className="rounded-full bg-forest/15 px-2.5 py-1 text-[11px] font-medium text-forest">
+          ✓ Terverifikasi
+        </span>
+      );
+    }
+    if (statusVal === "pending") {
+      return (
+        <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-1 text-[11px] font-medium text-amber-900">
+          ⏳ Pending Transfer
+        </span>
+      );
+    }
+    if (statusVal === "cancel" || statusVal === "deny") {
+      return (
+        <span className="rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-medium text-red-800">
+          ✕ Dibatalkan
+        </span>
+      );
+    }
+    return (
+      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-700">
+        {statusVal}
+      </span>
+    );
+  }
+
+  if (field.type === "number" && (field.column === "amount" || field.column.includes("amount"))) {
+    const num = Number(raw || 0);
+    return (
+      <span className="font-mono font-medium text-forest">
+        Rp {num.toLocaleString("id-ID")}
+      </span>
+    );
+  }
+
   if (field.type === "boolean") {
+    if (field.column === "is_anonymous") {
+      return (
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] ${
+            raw ? "bg-amber-100 text-amber-900" : "bg-forest/10 text-forest"
+          }`}
+        >
+          {raw ? "Anonim" : "Terbuka"}
+        </span>
+      );
+    }
+
+    if (field.column === "is_placeholder") {
+      return (
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] ${
+            raw ? "bg-amber-100 text-amber-900 font-medium" : "bg-forest/10 text-forest"
+          }`}
+        >
+          {raw ? "Simulasi" : "Riil"}
+        </span>
+      );
+    }
+
     return (
       <span
         className={`rounded-full px-2 py-1 text-[11px] ${
@@ -149,10 +213,19 @@ function CellValue({ field, row }: { field: Field; row: Row }) {
   }
 
   if (field.type === "date") {
-    return raw ? (
-      <span className="text-muted">{String(raw).slice(0, 10)}</span>
-    ) : (
-      <span className="text-muted">—</span>
+    if (!raw) return <span className="text-muted">—</span>;
+    const d = new Date(String(raw));
+    if (Number.isNaN(d.getTime())) return <span className="text-muted">{String(raw)}</span>;
+    return (
+      <span className="text-xs text-muted">
+        {d.toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </span>
     );
   }
 

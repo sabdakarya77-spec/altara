@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { type Campaign, formatRupiah } from "@/data/campaigns";
 import type { SiteSettings } from "@/data/settings";
 
@@ -83,18 +84,18 @@ export function DonationForm({ campaign, settings }: Props) {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok && !data.order_id) {
-        throw new Error(data.error || "Gagal mencatat donasi ke server.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.order_id) {
+        throw new Error(data.error || "Gagal mencatat donasi ke server. Silakan coba kembali.");
       }
 
       setRefCode(data.order_id);
       setStep("instruction");
-    } catch {
-      // Fallback jika API gagal / offline
-      const fallbackCode = `ALTR-${Date.now().toString(36).toUpperCase().slice(-4)}-${Math.floor(1000 + Math.random() * 9000)}`;
-      setRefCode(fallbackCode);
-      setStep("instruction");
+    } catch (err) {
+      setErrorMessage(
+        (err as Error).message ||
+          "Terjadi kendala saat menghubungi server. Donasi belum dapat dicatat."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -147,6 +148,38 @@ export function DonationForm({ campaign, settings }: Props) {
   const hasBankAccount = Boolean(bankAccountNo);
   const bankAccountHolder =
     settings?.bank_account_holder?.trim() || "Yayasan Abdi Laksata Raya";
+
+  if (campaign.is_placeholder) {
+    return (
+      <div className="rounded-sm border border-amber-300 bg-amber-50/70 p-6 sm:p-8 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="inline-block rounded-full bg-amber-200/90 border border-amber-300 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-900">
+            Program Simulasi
+          </span>
+        </div>
+        <h2 className="mt-3 font-display text-2xl font-normal text-ink">
+          Penerimaan Donasi Belum Dibuka
+        </h2>
+        <p className="mt-2 text-xs sm:text-sm text-muted leading-relaxed">
+          Program ini saat ini berstatus peragaan desain/simulasi sistem dan belum membuka penerimaan donasi publik. Tombol dan formulir transaksi dinonaktifkan demi keamanan.
+        </p>
+        <div className="mt-6 rounded-sm border border-amber-200/80 bg-white/90 p-4 text-xs text-amber-950">
+          <p className="font-semibold text-ink">Ingin mendukung program aktif kami?</p>
+          <p className="mt-1 text-muted leading-relaxed">
+            Anda dapat melihat program donasi lain yang sedang berjalan atau menghubungi narahubung yayasan.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/donasi"
+              className="inline-block rounded-sm bg-forest px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-parchment hover:bg-forest/90 transition-colors"
+            >
+              Jelajahi Program Aktif Lainnya →
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "instruction") {
     return (
@@ -429,7 +462,15 @@ export function DonationForm({ campaign, settings }: Props) {
           </button>
 
           <p className="mt-3 text-center text-[0.68rem] text-muted leading-relaxed">
-            🔒 Donasi disalurkan langsung ke rekening resmi Yayasan Abdi Laksata Raya. Konfirmasi resmi tanda terima donasi diterbitkan setelah verifikasi.
+            🔒 Donasi disalurkan langsung ke rekening resmi Yayasan Abdi Laksata Raya. Data kontak Anda dilindungi dan semata-mata digunakan untuk konfirmasi donasi resmi sesuai{" "}
+            <Link
+              href="/kebijakan-privasi"
+              className="text-forest underline hover:text-ink transition-colors"
+              target="_blank"
+            >
+              Kebijakan Privasi
+            </Link>{" "}
+            kami.
           </p>
         </div>
       </form>

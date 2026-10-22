@@ -142,6 +142,16 @@ export async function GET(
     const pool = getPool();
     if (!pool) throw new Error("DATABASE_URL belum dikonfigurasi");
     const table = TABLE_BY_COLLECTION[key];
+    if (key === "donations") {
+      const res = await pool.query(`
+        SELECT d.*, COALESCE(c.title, 'Program Tidak Diketahui') AS campaign_title
+        FROM donations d
+        LEFT JOIN campaigns c ON d.campaign_id = c.id
+        ORDER BY d.created_at DESC
+      `);
+      return NextResponse.json({ rows: res.rows });
+    }
+
     const res = await pool.query(`SELECT * FROM ${table} ORDER BY sort_order, id`);
     return NextResponse.json({ rows: res.rows });
   } catch (err) {
@@ -273,6 +283,32 @@ export async function PATCH(
         ) {
           void deleteFile(oldFile);
         }
+      }
+    }
+
+    // Jika status donasi diubah, sinkronkan metrik kampanye secara otomatis
+    if (collection === "donations" && oldRow.campaign_id && "status" in values) {
+      const amountVal = Number(oldRow.amount || 0);
+      if (oldRow.status !== "settlement" && values.status === "settlement") {
+        await pool.query(
+          `UPDATE campaigns
+           SET collected_amount = collected_amount + $1,
+               donor_count = donor_count + 1,
+               updated_at = now()
+           WHERE id = $2`,
+          [amountVal, oldRow.campaign_id]
+        );
+        revalidatePath("/donasi");
+      } else if (oldRow.status === "settlement" && values.status !== "settlement") {
+        await pool.query(
+          `UPDATE campaigns
+           SET collected_amount = GREATEST(0, collected_amount - $1),
+               donor_count = GREATEST(0, donor_count - 1),
+               updated_at = now()
+           WHERE id = $2`,
+          [amountVal, oldRow.campaign_id]
+        );
+        revalidatePath("/donasi");
       }
     }
 

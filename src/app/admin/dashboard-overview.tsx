@@ -69,6 +69,13 @@ export function DashboardOverview({
       accent: "border-forest/30",
     },
     {
+      key: "donations",
+      label: "Donasi Masuk",
+      value: `${metrics.donations?.pending ?? 0} pending`,
+      sub: `${metrics.donations?.settlement ?? 0} terverifikasi (total ${metrics.donations?.total ?? 0})`,
+      accent: "border-forest/40 bg-forest/5",
+    },
+    {
       key: "programs",
       label: "Program",
       value: `${metrics.programs.published}`,

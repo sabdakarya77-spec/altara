@@ -368,9 +368,12 @@ export function Footer({ settings }: { settings?: SiteSettings }) {
           </div>
         </div>
 
-        <p className="eyebrow hairline mt-16 pt-7">
-          © 2026 Yayasan Abdi Laksata Raya · Semua Hak Dilindungi Undang-Undang
-        </p>
+        <div className="eyebrow hairline mt-16 pt-7 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
+          <p>© 2026 Yayasan Abdi Laksata Raya · Semua Hak Dilindungi Undang-Undang</p>
+          <a href="/kebijakan-privasi" className="hover:text-forest transition-colors underline">
+            Kebijakan Privasi & Perlindungan Data
+          </a>
+        </div>
       </div>
     </footer>
   );
