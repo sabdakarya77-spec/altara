@@ -74,9 +74,16 @@ export default async function DonationDetailPage({ params }: Props) {
             {/* Kolom Kiri: Detail Program & Kisah Lapangan */}
             <article className="lg:col-span-7 space-y-8">
               <div>
-                <span className="inline-block rounded-full bg-forest/10 px-3.5 py-1 text-xs font-medium uppercase tracking-[0.16em] text-forest">
-                  {campaign.category}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-block rounded-full bg-forest/10 px-3.5 py-1 text-xs font-medium uppercase tracking-[0.16em] text-forest">
+                    {campaign.category}
+                  </span>
+                  {campaign.is_placeholder ? (
+                    <span className="inline-block rounded-full bg-amber-100 border border-amber-300 px-3 py-0.5 text-xs font-medium uppercase tracking-[0.12em] text-amber-900">
+                      Simulasi
+                    </span>
+                  ) : null}
+                </div>
                 <h1 className="display-lg mt-3 font-display text-ink leading-tight">
                   {campaign.title}
                 </h1>

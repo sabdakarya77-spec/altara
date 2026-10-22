@@ -17,10 +17,13 @@ CREATE TABLE IF NOT EXISTS campaigns (
   end_date         timestamptz,
   published        boolean NOT NULL DEFAULT true,
   featured         boolean NOT NULL DEFAULT false,
+  is_placeholder   boolean NOT NULL DEFAULT false,
   sort_order       integer NOT NULL DEFAULT 0,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS is_placeholder boolean NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS campaigns_slug_idx ON campaigns (slug);
 CREATE INDEX IF NOT EXISTS campaigns_sort_idx ON campaigns (sort_order);

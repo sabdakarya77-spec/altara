@@ -63,7 +63,7 @@ export const DEFAULT_CAMPAIGNS: Campaign[] = [
     published: true,
     featured: true,
     sort_order: 1,
-    is_placeholder: false,
+    is_placeholder: true,
   },
   {
     id: 2,
@@ -82,7 +82,7 @@ export const DEFAULT_CAMPAIGNS: Campaign[] = [
     published: true,
     featured: true,
     sort_order: 2,
-    is_placeholder: false,
+    is_placeholder: true,
   },
   {
     id: 3,
@@ -101,7 +101,7 @@ export const DEFAULT_CAMPAIGNS: Campaign[] = [
     published: true,
     featured: false,
     sort_order: 3,
-    is_placeholder: false,
+    is_placeholder: true,
   },
 ];
 

@@ -222,8 +222,8 @@ async function main() {
   for (let i = 0; i < DEFAULT_CAMPAIGNS.length; i++) {
     const c = DEFAULT_CAMPAIGNS[i];
     await client.query(
-      `INSERT INTO campaigns (title, slug, category, short_desc, description, image_url, target_amount, collected_amount, donor_count, start_date, end_date, published, featured, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `INSERT INTO campaigns (title, slug, category, short_desc, description, image_url, target_amount, collected_amount, donor_count, start_date, end_date, published, featured, is_placeholder, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        ON CONFLICT (slug) DO NOTHING`,
       [
         c.title,
@@ -239,6 +239,7 @@ async function main() {
         c.end_date,
         c.published,
         c.featured,
+        Boolean(c.is_placeholder),
         i,
       ]
     );

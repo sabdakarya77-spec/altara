@@ -233,6 +233,13 @@ export async function PATCH(
     const table = TABLE_BY_COLLECTION[collection];
     const allowed = WRITABLE[collection];
 
+    // Ambil data baris lama untuk memeriksa perubahan berkas media
+    const oldRowRes = await pool.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+    const oldRow = oldRowRes.rows[0];
+    if (!oldRow) {
+      return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
+    }
+
     const values: Record<string, unknown> = {};
     for (const column of allowed) {
       if (column in body) values[column] = sanitizeValue(column, body[column]);
@@ -251,6 +258,22 @@ export async function PATCH(
 
     if (res.rows.length === 0) {
       return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
+    }
+
+    // Bersihkan berkas media lama di disk jika kolom gambar diubah ke berkas baru
+    const MEDIA_COLS = ["image", "image_url", "cover_image", "logo_url", "file_url"];
+    for (const col of MEDIA_COLS) {
+      if (col in values) {
+        const oldFile = oldRow[col];
+        const newFile = values[col];
+        if (
+          typeof oldFile === "string" &&
+          oldFile.startsWith("/uploads/") &&
+          oldFile !== newFile
+        ) {
+          void deleteFile(oldFile);
+        }
+      }
     }
 
     revalidateDetailPaths(collection, typeof res.rows[0]?.slug === "string" ? res.rows[0].slug : undefined);

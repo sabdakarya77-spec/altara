@@ -481,6 +481,7 @@ type CampaignRow = {
   end_date: Date | string | null;
   published: boolean;
   featured: boolean;
+  is_placeholder?: boolean;
   sort_order: number;
 };
 
@@ -500,6 +501,7 @@ function mapCampaign(r: CampaignRow): Campaign {
     end_date: r.end_date ? (typeof r.end_date === "string" ? r.end_date : new Date(r.end_date).toISOString()) : null,
     published: r.published,
     featured: r.featured,
+    is_placeholder: Boolean(r.is_placeholder),
     sort_order: r.sort_order,
   };
 }
