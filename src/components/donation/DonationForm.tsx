@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { type Campaign, formatRupiah } from "@/data/campaigns";
+import type { SiteSettings } from "@/data/settings";
 
 interface Props {
   campaign: Campaign;
+  settings?: SiteSettings;
 }
 
 const PRESET_AMOUNTS = [25_000, 50_000, 100_000, 250_000, 500_000, 1_000_000];
 
-export function DonationForm({ campaign }: Props) {
+export function DonationForm({ campaign, settings }: Props) {
+  const [step, setStep] = useState<"input" | "instruction">("input");
   const [selectedAmount, setSelectedAmount] = useState<number>(100_000);
   const [customAmount, setCustomAmount] = useState<string>("");
   const [isCustom, setIsCustom] = useState<boolean>(false);
@@ -20,10 +23,14 @@ export function DonationForm({ campaign }: Props) {
   const [donorPhone, setDonorPhone] = useState("");
   const [message, setMessage] = useState("");
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
+  const [refCode, setRefCode] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const effectiveAmount = isCustom ? Number(customAmount.replace(/\D/g, "")) : selectedAmount;
+  const effectiveAmount = isCustom
+    ? Number(customAmount.replace(/\D/g, ""))
+    : selectedAmount;
 
   const handleSelectPreset = (amount: number) => {
     setSelectedAmount(amount);
@@ -39,7 +46,7 @@ export function DonationForm({ campaign }: Props) {
     setErrorMessage("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
 
@@ -58,41 +65,163 @@ export function DonationForm({ campaign }: Props) {
       return;
     }
 
-    setIsLoading(true);
+    // Buat kode referensi unik 4-digit
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    setRefCode(`ALTR-${randomCode}`);
+    setStep("instruction");
+  };
 
+  const copyToClipboard = async (text: string, type: "account" | "amount") => {
     try {
-      const res = await fetch("/api/donations/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          campaign_id: campaign.id,
-          amount: effectiveAmount,
-          donor_name: isAnonymous ? "Hamba Allah" : donorName.trim(),
-          is_anonymous: isAnonymous,
-          donor_email: donorEmail.trim(),
-          donor_phone: donorPhone.trim(),
-          message: message.trim(),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Gagal memproses donasi.");
+      await navigator.clipboard.writeText(text);
+      if (type === "account") {
+        setCopiedAccount(true);
+        setTimeout(() => setCopiedAccount(false), 2000);
+      } else {
+        setCopiedAmount(true);
+        setTimeout(() => setCopiedAmount(false), 2000);
       }
-
-      // Bila ada Snap token / redirect dari Midtrans
-      if (data.redirect_url) {
-        window.location.href = data.redirect_url;
-      } else if (data.order_id) {
-        window.location.href = `/donasi/sukses/${data.order_id}`;
-      }
-    } catch (err) {
-      setErrorMessage((err as Error).message);
-    } finally {
-      setIsLoading(false);
+    } catch {
+      // Fallback bila clipboard API diblokir
     }
   };
+
+  // Nomor WA dan Pesan Konfirmasi WhatsApp
+  const rawWa = settings?.contact_whatsapp || "";
+  const cleanWa = rawWa.replace(/\D/g, "").replace(/^0/, "62");
+  const displayName = isAnonymous ? "Hamba Allah (Anonim)" : donorName.trim();
+
+  const waMessage = [
+    `Halo Yayasan Abdi Laksata Raya, saya telah melakukan transfer donasi:`,
+    ``,
+    `• Program: ${campaign.title}`,
+    `• Nominal: ${formatRupiah(effectiveAmount)}`,
+    `• Donatur: ${displayName}`,
+    `• Email: ${donorEmail.trim()}`,
+    donorPhone.trim() ? `• No. Kontak: ${donorPhone.trim()}` : "",
+    `• Kode Referensi: ${refCode}`,
+    message.trim() ? `• Doa/Pesan: "${message.trim()}"` : "",
+    ``,
+    `Berikut saya lampirkan bukti transfer. Mohon dikonfirmasi. Terima kasih.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const waUrl = cleanWa
+    ? `https://wa.me/${cleanWa}?text=${encodeURIComponent(waMessage)}`
+    : `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
+
+  const bankName = settings?.bank_name || "Rekening Resmi Yayasan";
+  const bankAccountNo = settings?.bank_account_no || "";
+  const bankAccountHolder =
+    settings?.bank_account_holder || "Yayasan Abdi Laksata Raya";
+
+  if (step === "instruction") {
+    return (
+      <div className="rounded-sm border border-line bg-parchment p-6 sm:p-8 shadow-sm">
+        <div className="border-b border-line/70 pb-4">
+          <span className="eyebrow text-forest">Instruksi Transfer Donasi</span>
+          <h2 className="mt-1 font-display text-2xl font-normal text-ink">
+            Selesaikan Donasi Anda
+          </h2>
+          <p className="mt-1 text-xs text-muted">
+            Salurkan donasi melalui transfer bank resmi berikut:
+          </p>
+        </div>
+
+        {/* Kotak Nominal yang Harus Ditransfer */}
+        <div className="mt-6 rounded-sm border border-forest/30 bg-forest/5 p-4 sm:p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wider text-muted font-medium">
+              Nominal Transfer
+            </span>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(String(effectiveAmount), "amount")}
+              className="text-xs font-medium text-forest hover:text-ink transition-colors"
+            >
+              {copiedAmount ? "✓ Tersalin" : "Salin Nominal"}
+            </button>
+          </div>
+          <p className="mt-1 font-display text-2xl sm:text-3xl text-forest font-normal">
+            {formatRupiah(effectiveAmount)}
+          </p>
+          <p className="mt-1 text-[0.72rem] text-muted">
+            Donasi untuk: <strong className="text-ink">{campaign.title}</strong>
+          </p>
+        </div>
+
+        {/* Kotak Rekening Tujuan */}
+        <div className="mt-5 space-y-3 rounded-sm border border-line bg-ivory/80 p-4 sm:p-5">
+          <span className="block text-[0.68rem] uppercase tracking-wider text-muted">
+            Rekening Tujuan
+          </span>
+
+          <div className="flex items-baseline justify-between border-b border-line/60 pb-3">
+            <div>
+              <span className="text-xs text-muted">Bank Tujuan</span>
+              <p className="text-sm font-semibold text-ink">{bankName}</p>
+            </div>
+            {bankAccountNo ? (
+              <button
+                type="button"
+                onClick={() => copyToClipboard(bankAccountNo, "account")}
+                className="text-xs font-medium text-forest hover:text-ink transition-colors"
+              >
+                {copiedAccount ? "✓ Tersalin" : "Salin No. Rekening"}
+              </button>
+            ) : null}
+          </div>
+
+          <div className="border-b border-line/60 pb-3">
+            <span className="text-xs text-muted">Nomor Rekening</span>
+            <p className="font-mono text-lg font-bold tracking-wider text-forest">
+              {bankAccountNo || "Hubungi Narahubung Yayasan"}
+            </p>
+          </div>
+
+          <div>
+            <span className="text-xs text-muted">Atas Nama</span>
+            <p className="text-sm font-medium text-ink">{bankAccountHolder}</p>
+          </div>
+
+          {refCode && (
+            <div className="border-t border-line/60 pt-3">
+              <span className="text-xs text-muted">Kode Referensi Donasi</span>
+              <p className="font-mono text-sm font-bold text-ink">{refCode}</p>
+              <span className="text-[0.68rem] text-muted">
+                (Cantumkan pada berita transfer bila memungkinkan)
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Tombol Konfirmasi WhatsApp */}
+        <div className="mt-6 space-y-3 border-t border-line/70 pt-5">
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-sm bg-emerald-700 py-3.5 px-4 text-center text-xs font-semibold uppercase tracking-[0.16em] text-white shadow-sm transition-all duration-300 hover:bg-emerald-800"
+          >
+            <span>💬 Konfirmasi via WhatsApp Yayasan →</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={() => setStep("input")}
+            className="w-full rounded-sm border border-line py-2.5 text-center text-xs font-medium text-muted transition-colors hover:border-ink hover:text-ink"
+          >
+            ← Kembali / Ubah Data Donasi
+          </button>
+
+          <p className="text-center text-[0.68rem] text-muted leading-relaxed">
+            Setelah transfer, kirimkan bukti transfer ke WhatsApp resmi agar tanda terima donasi resmi segera diterbitkan.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-sm border border-line bg-parchment p-6 sm:p-8 shadow-sm">
@@ -229,14 +358,14 @@ export function DonationForm({ campaign }: Props) {
 
           <button
             type="submit"
-            disabled={isLoading || effectiveAmount < 10_000}
+            disabled={effectiveAmount < 10_000}
             className="w-full rounded-sm bg-forest py-3.5 px-4 text-center text-xs font-semibold uppercase tracking-[0.18em] text-parchment shadow-sm transition-all duration-300 hover:bg-forest/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Memproses..." : "Lanjutkan Pembayaran →"}
+            Lanjutkan Donasi (Transfer Manual) →
           </button>
 
           <p className="mt-3 text-center text-[0.68rem] text-muted leading-relaxed">
-            🔒 Pembayaran aman & terverifikasi. Seluruh donasi dicatat transparan di pembukuan yayasan.
+            🔒 Donasi disalurkan langsung ke rekening resmi Yayasan Abdi Laksata Raya. Konfirmasi instan via WhatsApp.
           </p>
         </div>
       </form>

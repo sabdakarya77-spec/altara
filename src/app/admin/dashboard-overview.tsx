@@ -62,6 +62,13 @@ export function DashboardOverview({
       accent: "border-forest/30",
     },
     {
+      key: "campaigns",
+      label: "Program Donasi",
+      value: `${metrics.campaigns?.published ?? 0}`,
+      sub: `dari total ${metrics.campaigns?.total ?? 0} program`,
+      accent: "border-forest/30",
+    },
+    {
       key: "programs",
       label: "Program",
       value: `${metrics.programs.published}`,

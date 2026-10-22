@@ -148,7 +148,7 @@ export default async function DonationDetailPage({ params }: Props) {
 
             {/* Kolom Kanan: Sticky Form Donasi */}
             <aside className="lg:col-span-5 lg:sticky lg:top-28">
-              <DonationForm campaign={campaign} />
+              <DonationForm campaign={campaign} settings={settings} />
             </aside>
           </div>
         </div>

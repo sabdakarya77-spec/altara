@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionHashFromCookies, isSessionValid } from "@/lib/auth";
 import { getPool } from "@/lib/db";
 import { DEFAULT_HERO_SLIDES } from "@/data/hero-slides";
+import { DEFAULT_CAMPAIGNS } from "@/data/campaigns";
 import {
   documents as seedDocuments,
   journal as seedJournal,
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 export type OverviewMetrics = {
   hero: { total: number; published: number };
+  campaigns: { total: number; published: number };
   programs: { total: number; published: number };
   stories: { total: number; published: number };
   journal: { total: number; published: number };
@@ -25,7 +27,7 @@ export type OverviewMetrics = {
 };
 
 export type RecentItem = {
-  type: "program" | "story" | "journal";
+  type: "program" | "story" | "journal" | "campaign";
   title: string;
   slug: string;
   published: boolean;
@@ -49,6 +51,10 @@ export async function GET() {
     // Mode fallback bila Postgres belum terhubung
     const metrics: OverviewMetrics = {
       hero: { total: DEFAULT_HERO_SLIDES.length, published: DEFAULT_HERO_SLIDES.length },
+      campaigns: {
+        total: DEFAULT_CAMPAIGNS.length,
+        published: DEFAULT_CAMPAIGNS.filter((c) => c.published).length,
+      },
       programs: { total: seedPrograms.length, published: seedPrograms.length },
       stories: { total: seedStories.length, published: seedStories.length },
       journal: { total: seedJournal.length, published: seedJournal.length },
@@ -91,6 +97,7 @@ export async function GET() {
   try {
     const [
       heroRes,
+      campaignsRes,
       programsRes,
       storiesRes,
       journalRes,
@@ -101,6 +108,9 @@ export async function GET() {
     ] = await Promise.all([
       pool.query<{ count: string; published: string }>(
         "SELECT COUNT(*)::text AS count, COUNT(*) FILTER (WHERE published)::text AS published FROM hero_slides"
+      ),
+      pool.query<{ count: string; published: string }>(
+        "SELECT COUNT(*)::text AS count, COUNT(*) FILTER (WHERE published)::text AS published FROM campaigns"
       ),
       pool.query<{ count: string; published: string }>(
         "SELECT COUNT(*)::text AS count, COUNT(*) FILTER (WHERE published)::text AS published FROM programs"
@@ -120,8 +130,10 @@ export async function GET() {
       pool.query<{ count: string; verified: string }>(
         "SELECT COUNT(*)::text AS count, COUNT(*) FILTER (WHERE NOT is_placeholder)::text AS verified FROM stats"
       ),
-      pool.query<{ type: "program" | "story" | "journal"; title: string; slug: string; published: boolean; updated_at: Date }>(`
+      pool.query<{ type: "program" | "story" | "journal" | "campaign"; title: string; slug: string; published: boolean; updated_at: Date }>(`
         SELECT 'journal' AS type, title, slug, published, updated_at FROM journal_posts
+        UNION ALL
+        SELECT 'campaign' AS type, title, slug, published, updated_at FROM campaigns
         UNION ALL
         SELECT 'program' AS type, title, slug, published, updated_at FROM programs
         UNION ALL
@@ -134,6 +146,10 @@ export async function GET() {
       hero: {
         total: Number(heroRes.rows[0]?.count ?? 0),
         published: Number(heroRes.rows[0]?.published ?? 0),
+      },
+      campaigns: {
+        total: Number(campaignsRes.rows[0]?.count ?? 0),
+        published: Number(campaignsRes.rows[0]?.published ?? 0),
       },
       programs: {
         total: Number(programsRes.rows[0]?.count ?? 0),

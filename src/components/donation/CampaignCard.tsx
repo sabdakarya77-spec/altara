@@ -32,6 +32,11 @@ export function CampaignCard({ campaign }: Props) {
         <span className="absolute left-4 top-4 rounded-full bg-ivory/95 px-3 py-1 text-[0.65rem] font-medium uppercase tracking-[0.15em] text-forest backdrop-blur-sm shadow-sm">
           {campaign.category}
         </span>
+        {campaign.is_placeholder ? (
+          <span className="absolute right-4 top-4 rounded-full bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.12em] text-amber-900 backdrop-blur-sm shadow-sm">
+            Simulasi
+          </span>
+        ) : null}
       </div>
 
       {/* Konten & Progres */}

@@ -18,9 +18,6 @@ export default async function DonationCatalogPage() {
     getSettings(),
   ]);
 
-  const featured = campaigns.find((c) => c.featured) || campaigns[0];
-  const regularCampaigns = campaigns.filter((c) => c.id !== featured?.id);
-
   return (
     <div className="min-h-screen bg-ivory flex flex-col justify-between">
       <Navbar />

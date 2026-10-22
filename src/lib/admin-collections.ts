@@ -9,23 +9,23 @@
 
 export type Collection =
   | "hero_slides"
+  | "campaigns"
   | "programs"
   | "stories"
   | "stats"
   | "journal"
   | "documents"
-  | "partners"
-  | "settings";
+  | "partners";
 
 export const COLLECTIONS: Collection[] = [
   "hero_slides",
+  "campaigns",
   "programs",
   "stories",
   "stats",
   "journal",
   "documents",
   "partners",
-  "settings",
 ];
 
 /**
@@ -34,18 +34,18 @@ export const COLLECTIONS: Collection[] = [
  */
 export const TABLE_BY_COLLECTION: Record<Collection, string> = {
   hero_slides: "hero_slides",
+  campaigns: "campaigns",
   programs: "programs",
   stories: "stories",
   stats: "stats",
   journal: "journal_posts",
   documents: "documents",
   partners: "partners",
-  settings: "settings",
 };
 
 /**
  * Kolom yang boleh ditulis langsung dari body request.
- * Sisanya (id, created_at, updated_at) dikelola server.
+ * Sisanya (id, created_at, updated_at, collected_amount, donor_count) dikelola server.
  */
 export const WRITABLE: Record<Collection, string[]> = {
   hero_slides: [
@@ -59,6 +59,20 @@ export const WRITABLE: Record<Collection, string[]> = {
     "sort_order",
     "published",
   ],
+  campaigns: [
+    "title",
+    "slug",
+    "category",
+    "short_desc",
+    "description",
+    "image_url",
+    "target_amount",
+    "start_date",
+    "end_date",
+    "published",
+    "featured",
+    "sort_order",
+  ],
   programs: ["idx", "title", "slug", "description", "image", "alt", "published", "sort_order"],
   stories: ["category", "title", "slug", "description", "image", "alt", "published", "sort_order"],
   stats: ["idx", "value", "label", "sort_order", "is_placeholder"],
@@ -68,7 +82,6 @@ export const WRITABLE: Record<Collection, string[]> = {
   ],
   documents: ["title", "meta", "file_url", "published", "sort_order"],
   partners: ["name", "logo_url", "published", "sort_order"],
-  settings: ["key", "value"],
 };
 
 /** Apakah `value` adalah kunci koleksi yang dikenal? */

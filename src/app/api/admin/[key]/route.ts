@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { getSessionHashFromCookies, isSessionValid } from "@/lib/auth";
 import { getPool } from "@/lib/db";
 import { uniqueSlug } from "@/lib/slug";
+import { deleteFile } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,6 +50,10 @@ function revalidateDetailPaths(collection: string, slug?: string): void {
   } else if (collection === "journal") {
     revalidatePath("/jurnal/[slug]", "page");
     if (slug) revalidatePath(`/jurnal/${slug}`);
+  } else if (collection === "campaigns") {
+    revalidatePath("/donasi");
+    revalidatePath("/donasi/[slug]", "page");
+    if (slug) revalidatePath(`/donasi/${slug}`);
   }
 }
 
@@ -78,6 +83,10 @@ function sanitizeValue(column: string, value: unknown): unknown {
     const d = new Date(String(value));
     return Number.isNaN(d.getTime()) ? null : d.toISOString();
   }
+  // Kolom artikel / narasi panjang tidak dipotong 4000 karakter
+  if (column === "body" || column === "description") {
+    return String(value).slice(0, 100_000);
+  }
   return String(value).slice(0, 4000);
 }
 
@@ -89,7 +98,7 @@ async function existingSlugs(
   pool: import("pg").Pool
 ): Promise<string[]> {
   const table = TABLE_BY_COLLECTION[collection];
-  if (!["programs", "stories", "journal"].includes(collection)) return [];
+  if (!["programs", "stories", "journal", "campaigns"].includes(collection)) return [];
   const res = await pool.query<{ slug: string }>(`SELECT slug FROM ${table}`);
   return res.rows.map((r) => r.slug);
 }
@@ -277,9 +286,18 @@ export async function DELETE(
     const pool = getPool();
     if (!pool) throw new Error("DATABASE_URL belum dikonfigurasi");
     const table = TABLE_BY_COLLECTION[key];
-    const res = await pool.query(`DELETE FROM ${table} WHERE id = $1 RETURNING id`, [id]);
+    const res = await pool.query(`DELETE FROM ${table} WHERE id = $1 RETURNING *`, [id]);
     if (res.rows.length === 0) {
       return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
+    }
+
+    // Bersihkan berkas media yang tersimpan di disk lokal bila ada
+    const deletedRow = res.rows[0];
+    const MEDIA_COLS = ["image", "image_url", "cover_image", "logo_url", "file_url"];
+    for (const col of MEDIA_COLS) {
+      if (typeof deletedRow[col] === "string" && deletedRow[col].startsWith("/uploads/")) {
+        void deleteFile(deletedRow[col]);
+      }
     }
 
     revalidateDetailPaths(key);
