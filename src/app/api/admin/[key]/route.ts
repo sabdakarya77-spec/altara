@@ -34,8 +34,27 @@ async function unauthorized(): Promise<NextResponse> {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
+/**
+ * Revalidasi halaman index PLUS halaman detail yang relevan.
+ * Dipanggil setiap kali sebuah entri berhasil dibuat, diperbarui, atau dihapus.
+ */
+function revalidateDetailPaths(collection: string, slug?: string): void {
+  revalidatePath("/");
+  if (collection === "programs") {
+    revalidatePath("/program/[slug]", "page");
+    if (slug) revalidatePath(`/program/${slug}`);
+  } else if (collection === "stories") {
+    revalidatePath("/cerita/[slug]", "page");
+    if (slug) revalidatePath(`/cerita/${slug}`);
+  } else if (collection === "journal") {
+    revalidatePath("/jurnal/[slug]", "page");
+    if (slug) revalidatePath(`/jurnal/${slug}`);
+  }
+}
+
+
 async function ensureAuth(): Promise<boolean> {
-  const hash = getSessionHashFromCookies();
+  const hash = await getSessionHashFromCookies();
   return isSessionValid(hash);
 }
 
@@ -102,17 +121,18 @@ function describeDbError(err: unknown): string {
 /** Daftar semua entri dalam satu koleksi. */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { key: string } }
+  { params }: { params: Promise<{ key: string }> }
 ) {
   if (!(await ensureAuth())) return unauthorized();
-  if (!isCollection(params.key)) {
+  const { key } = await params;
+  if (!isCollection(key)) {
     return NextResponse.json({ error: "Koleksi tidak dikenal" }, { status: 404 });
   }
 
   try {
     const pool = getPool();
     if (!pool) throw new Error("DATABASE_URL belum dikonfigurasi");
-    const table = TABLE_BY_COLLECTION[params.key];
+    const table = TABLE_BY_COLLECTION[key];
     const res = await pool.query(`SELECT * FROM ${table} ORDER BY sort_order, id`);
     return NextResponse.json({ rows: res.rows });
   } catch (err) {
@@ -125,10 +145,11 @@ export async function GET(
 /** Tambah entri baru. */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { key: string } }
+  { params }: { params: Promise<{ key: string }> }
 ) {
   if (!(await ensureAuth())) return unauthorized();
-  if (!isCollection(params.key)) {
+  const { key } = await params;
+  if (!isCollection(key)) {
     return NextResponse.json({ error: "Koleksi tidak dikenal" }, { status: 404 });
   }
 
@@ -140,7 +161,7 @@ export async function POST(
   try {
     const pool = getPool();
     if (!pool) throw new Error("DATABASE_URL belum dikonfigurasi");
-    const collection = params.key;
+    const collection = key;
     const table = TABLE_BY_COLLECTION[collection];
     const allowed = WRITABLE[collection];
 
@@ -167,7 +188,7 @@ export async function POST(
                 RETURNING *`;
     const res = await pool.query(sql, columns.map((c) => values[c]));
 
-    revalidatePath("/");
+    revalidateDetailPaths(collection, typeof values.slug === "string" ? values.slug : undefined);
     return NextResponse.json({ row: res.rows[0] }, { status: 201 });
   } catch (err) {
     console.error("[api/admin] POST gagal:", (err as Error).message);
@@ -178,10 +199,11 @@ export async function POST(
 /** Perbarui entri yang ada. */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { key: string } }
+  { params }: { params: Promise<{ key: string }> }
 ) {
   if (!(await ensureAuth())) return unauthorized();
-  if (!isCollection(params.key)) {
+  const { key } = await params;
+  if (!isCollection(key)) {
     return NextResponse.json({ error: "Koleksi tidak dikenal" }, { status: 404 });
   }
 
@@ -198,7 +220,7 @@ export async function PATCH(
   try {
     const pool = getPool();
     if (!pool) throw new Error("DATABASE_URL belum dikonfigurasi");
-    const collection = params.key;
+    const collection = key;
     const table = TABLE_BY_COLLECTION[collection];
     const allowed = WRITABLE[collection];
 
@@ -222,7 +244,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
     }
 
-    revalidatePath("/");
+    revalidateDetailPaths(collection, typeof res.rows[0]?.slug === "string" ? res.rows[0].slug : undefined);
     return NextResponse.json({ row: res.rows[0] });
   } catch (err) {
     console.error("[api/admin] PATCH gagal:", (err as Error).message);
@@ -233,10 +255,11 @@ export async function PATCH(
 /** Hapus entri. */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { key: string } }
+  { params }: { params: Promise<{ key: string }> }
 ) {
   if (!(await ensureAuth())) return unauthorized();
-  if (!isCollection(params.key)) {
+  const { key } = await params;
+  if (!isCollection(key)) {
     return NextResponse.json({ error: "Koleksi tidak dikenal" }, { status: 404 });
   }
 
@@ -253,13 +276,13 @@ export async function DELETE(
   try {
     const pool = getPool();
     if (!pool) throw new Error("DATABASE_URL belum dikonfigurasi");
-    const table = TABLE_BY_COLLECTION[params.key];
+    const table = TABLE_BY_COLLECTION[key];
     const res = await pool.query(`DELETE FROM ${table} WHERE id = $1 RETURNING id`, [id]);
     if (res.rows.length === 0) {
       return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
     }
 
-    revalidatePath("/");
+    revalidateDetailPaths(key);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin] DELETE gagal:", (err as Error).message);

@@ -62,7 +62,7 @@ export async function saveFile(
   }
   await mkdir(UPLOAD_DIR, { recursive: true });
   const fileName = safeFileName(originalName, mimeType);
-  await writeFile(path.join(UPLOAD_DIR, fileName), buffer);
+  await writeFile(path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, fileName), buffer);
   return `${UPLOAD_URL_PREFIX}/${fileName}`;
 }
 
@@ -73,8 +73,8 @@ export async function saveFile(
 export async function deleteFile(publicUrl: string): Promise<void> {
   if (!publicUrl.startsWith(`${UPLOAD_URL_PREFIX}/`)) return;
   const fileName = path.basename(publicUrl);
-  const target = path.resolve(UPLOAD_DIR, fileName);
-  const root = path.resolve(UPLOAD_DIR);
+  const target = path.resolve(/*turbopackIgnore: true*/ UPLOAD_DIR, fileName);
+  const root = path.resolve(/*turbopackIgnore: true*/ UPLOAD_DIR);
   if (!target.startsWith(root + path.sep)) return;
   try {
     await unlink(target);

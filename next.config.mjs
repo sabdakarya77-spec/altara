@@ -16,24 +16,17 @@ const nextConfig = {
   // Server produksi mandiri: `node server.js` tanpa node_modules penuh.
   output: "standalone",
 
-  experimental: {
-    // Akar penelusuran berkas. Tanpa ini, Next menelusuri dari folder
-    // `.next` saja dan `pg` (yang ada di node_modules) bisa terlewat.
-    // Di Next 14.2 key ini masih berada di dalam `experimental`.
-    outputFileTracingRoot: projectRoot,
+  // Akar penelusuran berkas untuk standalone output.
+  outputFileTracingRoot: projectRoot,
 
-    // `pg` dan `sharp` tidak boleh di-bundle webpack: keduanya memakai
-    // native binding dan optional require saat runtime. Menandainya external
-    // membuat Next menyalinnya utuh ke `.next/standalone/node_modules`.
-    serverComponentsExternalPackages: ["pg", "sharp"],
-  },
+  // `pg` dan `sharp` tidak boleh di-bundle webpack / Turbopack: keduanya memakai
+  // native binding dan optional require saat runtime.
+  serverExternalPackages: ["pg", "sharp"],
 
   images: {
     // Semua aset visual bersifat lokal (public/assets + /uploads).
     // Konversi AVIF/WebP lewat optimizer bawaan Next.
-    // AVIF dihapus sementara — advisory RCE di Next 14.x Image Optimizer
-    // menyebut format ini. Aktifkan kembali setelah upgrade ke Next 15.x.
-    formats: ["image/webp"],
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [],
   },
 

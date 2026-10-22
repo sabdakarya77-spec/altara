@@ -3,6 +3,28 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getJournal, getJournalBySlug } from "@/lib/queries";
 
+/**
+ * Strip semua HTML tag dan render teks sebagai paragraf terpisah.
+ * Menggantikan dangerouslySetInnerHTML — tidak ada XSS risk.
+ */
+function JournalBody({ body }: { body: string }) {
+  // 1. Hapus semua tag HTML
+  const plain = body.replace(/<[^>]+>/g, "").trim();
+  // 2. Pecah menjadi paragraf berdasarkan baris kosong
+  const paragraphs = plain.split(/\n{2,}/).filter(Boolean);
+  if (paragraphs.length === 0) return null;
+  return (
+    <div className="mt-10 space-y-6 text-base leading-relaxed text-muted">
+      {paragraphs.map((p, i) => (
+        // eslint-disable-next-line react/no-array-index-key
+        <p key={i}>{p.replace(/\n/g, " ")}</p>
+      ))}
+    </div>
+  );
+}
+
+export const dynamicParams = true;
+
 interface Props {
   params: Promise<{ slug: string }>;
 }
@@ -69,15 +91,7 @@ export default async function JurnalPage({ params }: Props) {
           <p className="body-lead">{post.excerpt}</p>
 
           {/* Body — ditampilkan jika ada (dari DB) */}
-          {post.body && (
-            <div
-              className="prose prose-neutral mt-10 max-w-none"
-              // Body disimpan sebagai Markdown yang sudah disanitasi di DB
-              // Untuk sprint ini ditampilkan sebagai teks polos;
-              // tambahkan remark/react-markdown saat body aktif dipakai
-              dangerouslySetInnerHTML={{ __html: post.body }}
-            />
-          )}
+          {post.body && <JournalBody body={post.body} />}
 
           <div className="hairline mt-12 pt-8">
             <a

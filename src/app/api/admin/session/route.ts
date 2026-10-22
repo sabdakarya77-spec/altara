@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
  * Validasi penuh dilakukan di sini (Node Runtime), bukan di middleware.
  */
 export async function GET() {
-  const hash = getSessionHashFromCookies();
+  const hash = await getSessionHashFromCookies();
   const authenticated = await isSessionValid(hash);
   return NextResponse.json({ authenticated }, { status: authenticated ? 200 : 401 });
 }

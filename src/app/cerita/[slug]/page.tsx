@@ -3,6 +3,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getStories, getStoryBySlug } from "@/lib/queries";
 
+export const dynamicParams = true;
+
 interface Props {
   params: Promise<{ slug: string }>;
 }

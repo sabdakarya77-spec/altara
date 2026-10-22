@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
  * Selalu mengembalikan 200 agar UI tidak bocor status session.
  */
 export async function POST() {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (token) {
     try {
       await revokeSession(token);
@@ -18,6 +19,6 @@ export async function POST() {
       console.error("[auth] gagal mencabut session:", (err as Error).message);
     }
   }
-  cookies().delete(SESSION_COOKIE);
+  cookieStore.delete(SESSION_COOKIE);
   return NextResponse.json({ ok: true });
 }

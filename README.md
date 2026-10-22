@@ -150,19 +150,23 @@ src/
     jurnal/[slug]/    # halaman detail publik artikel jurnal
     admin/
       page.tsx        # panel admin — merender AdminDashboard
-      admin-dashboard.tsx  # shell: sidebar, header, state CRUD
-      admin-entry-table.tsx# tabel daftar entri per koleksi
+      admin-dashboard.tsx  # shell: sidebar desktop, drawer mobile, routing modul
+      dashboard-overview.tsx# beranda admin: kartu metrik, aksi cepat, pembaruan terkini
+      settings-view.tsx    # formulir kontak yayasan, rekening donasi, dan medsos
+      admin-entry-table.tsx# tabel daftar entri + tombol quick preview web
       admin-entry-dialog.tsx# modal tambah / ubah
-      admin-entry-form.tsx  # form per-field + konversi tipe
+      admin-entry-form.tsx  # form per-field + konversi tipe (termasuk select)
       admin-image-field.tsx # unggah & pratinjau gambar
       fields.ts        # definisi kolom tiap koleksi (sumber tunggal)
       login/           # halaman + form login
     api/admin/
-      login/route.ts  # POST — buat session, set cookie
-      logout/route.ts # POST — cabut session
-      session/route.ts# GET  — cek session aktif
-      upload/route.ts # POST — unggah gambar (validasi + sharp)
-      [key]/route.ts  # GET/POST/PATCH/DELETE CRUD koleksi
+      login/route.ts   # POST — buat session, set cookie
+      logout/route.ts  # POST — cabut session
+      session/route.ts # GET  — cek session aktif
+      overview/route.ts# GET  — metrik agregat, status DB, entri terbaru
+      settings/route.ts# GET/PATCH — konfigurasi organisasi key-value
+      upload/route.ts  # POST — unggah gambar (validasi + sharp)
+      [key]/route.ts   # GET/POST/PATCH/DELETE CRUD koleksi
     health/route.ts   # GET  — liveness (selalu 200 selama proses hidup)
     ready/route.ts    # GET  — readiness (503 bila database mati)
     uploads/[...path]/route.ts  # menyajikan berkas hasil upload
@@ -174,18 +178,22 @@ src/
     Impact.tsx        # ImpactStats, StoryFeature, StoryGrid, JournalSection
     Closing.tsx       # FounderMessage, Transparency, Partners, SupportCTA, Footer
     primitives.tsx    # Reveal, SectionHeader, Emblem, Lockup, useReveal
-  data/content.ts     # konten statis (fallback bila database tidak tersedia)
+  data/
+    content.ts        # konten statis program, cerita, jurnal, dokumen, mitra
+    hero-slides.ts    # tipe & data bawaan hero slider beranda
+    settings.ts       # tipe & data bawaan pengaturan yayasan (kontak, bank, medsos)
   lib/
     db.ts             # connection pool + helper query (`queryMaybe`)
-    queries.ts        # query baca konten publik + fallback ke content.ts
+    queries.ts        # query baca konten publik + fallback aman
     auth.ts           # session admin (hash SHA-256, constant-time compare)
     admin-collections.ts # daftar koleksi + kolom yang boleh ditulis
     image.ts          # optimasi sharp (resize 1920px, WebP)
     storage.ts        # simpan/hapus berkas upload di luar public/
     slug.ts           # slug unik
 db/
-  migrations/001_init.sql  # skema: programs, stories, stats, journal_posts,
-                           #   documents, partners, sessions, settings
+  migrations/
+    001_init.sql      # skema awal: programs, stories, stats, journal_posts, docs, partners, sessions
+    002_hero_and_settings.sql # skema hero_slides dan settings (key-value)
 scripts/
   migrate.ts          # pnpm db:migrate
   seed.ts             # pnpm db:seed
@@ -206,16 +214,18 @@ docs/
 
 ## Halaman
 
-- `/` — Beranda: hero, tentang, 4 program, dampak, cerita, jurnal, pesan pendiri,
-  transparansi, mitra, CTA dukungan, footer. Konten dibaca dari Postgres;
-  bila database tidak tersedia, situs otomatis memakai fallback dari
-  `src/data/content.ts`. Bila database hidup tetapi tabelnya sengaja dikosongkan,
-  tabel kosong itu yang ditampilkan - konten statis tidak muncul diam-diam.
+- `/` — Beranda publik: Hero slider sinematik (5 slide terkurasi), tentang, 4 program, dampak, cerita, jurnal, pesan pendiri, transparansi dokumen, mitra, CTA dukungan resmi berrekening bank, dan footer dengan kanal media sosial.
+- `/program/[slug]` — Halaman detail publik program yayasan.
+- `/cerita/[slug]` — Halaman detail publik kisah inspiratif penerima manfaat.
+- `/jurnal/[slug]` — Halaman artikel dan publikasi lapangan.
 - `/admin/login` — Login admin (password tunggal dari `ALTARA_ADMIN_PASSWORD`).
-- `/admin` — Panel admin: sidebar koleksi (Statistik Dampak, Program, Cerita
-  Dampak, Jurnal, Dokumen Publik, Mitra & Pendukung), tabel entri, dan modal
-  tambah/ubah. Semua operasi lewat `/api/admin/*` yang memvalidasi session di
-  server; setiap penyimpanan memicu revalidasi halaman publik.
+- `/admin` — Panel admin komprehensif:
+  - **Ringkasan (Overview):** Metrik statistik konten aktif, tombol Aksi Cepat, dan ringkasan aktivitas konten terbaru.
+  - **Konten Beranda:** Manajemen slide Hero (foto, headline, crop objectPosition, Ken Burns) & statistik dampak.
+  - **Publikasi & Cerita:** Manajemen Program, Cerita Dampak, dan Artikel Jurnal + tombol pratinjau live "Lihat di Web" (`↗`).
+  - **Dokumen & Kemitraan:** Dokumen publik (transparansi PDF) dan Mitra pendukung.
+  - **Pengaturan Yayasan:** Nomor WhatsApp narahubung, email resmi, alamat operasional, rekening bank donasi resmi, serta 6 akun media sosial resmi.
+  - **Mobile Drawer:** Antarmuka responsif ramah layar ponsel bagi pengelola lapangan.
 - `/uploads/<berkas>` — Berkas gambar hasil unggahan (disajikan di luar
   `public/` dengan proteksi path traversal dan cache immutable).
 ## Dokumentasi
@@ -252,10 +262,9 @@ letter-spacing tinggi), `.hairline` (garis atas tipis), `.reveal` / `.image-reve
 
 ## Catatan Pengembang
 
-- Semua navigasi publik berupa anchor (`#tentang`, `#program`, `#dampak`, dan
-  seterusnya) dalam satu halaman; belum ada route terpisah per halaman.
-- Panel admin sudah memakai autentikasi (password tunggal + session cookie)
-  dan endpoint server berbasis database — bukan lagi state di browser.
+- Halaman beranda memadukan anchor section (`#tentang`, `#program`, `#dampak`, `#cerita`, `#jurnal`, `#transparansi`, `#dukung`) dengan rute detail mandiri yang SEO-friendly (`/program/[slug]`, `/cerita/[slug]`, `/jurnal/[slug]`).
+- Panel admin terhubung langsung ke PostgreSQL dan otomatis memicu `revalidatePath("/")` untuk memastikan konten publik selalu sinkron secara realtime.
+- Hero slider beranda dan konfigurasi yayasan memiliki data fallback murni di `src/data/*.ts` yang terpisah dari runtime server, menjamin keamanan bundle client.
 - Animasi memakai CSS murni tanpa library animasi eksternal.
 - Font dimuat lewat `<link>` Google Fonts di `layout.tsx`, bukan `next/font`.
 - `next.config.mjs` memakai `output: "standalone"` untuk image container
@@ -267,5 +276,4 @@ letter-spacing tinggi), `.hairline` (garis atas tipis), `.reveal` / `.image-reve
   gagal dengan `EPERM ... symlink` bila Next menelusuri symlink
   `node_modules` milik pnpm.
 - Angka dampak (`42.508 Jiwa`, `38 Program`, `34 Kota`, `92%`) di
-  `src/data/content.ts` masih placeholder desain dan wajib diganti dengan angka
-  asli sebelum situs tayang.
+  `src/data/content.ts` masih placeholder desain dan dapat disunting langsung lewat panel admin.

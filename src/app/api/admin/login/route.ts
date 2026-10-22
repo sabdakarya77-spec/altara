@@ -8,6 +8,7 @@ import {
   SESSION_COOKIE,
   verifyPassword,
 } from "@/lib/auth";
+import { checkRateLimit, recordFailedAttempt, resetAttempts } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +20,28 @@ export const dynamic = "force-dynamic";
  * dicatat di tabel `sessions` dan cookie berisi token acak (httpOnly) dikirim.
  * Respons deliberately sama untuk "password salah" dan "session gagal dibuat"
  * agar tidak membocorkan informasi apa pun.
+ *
+ * Rate limit: 10 percobaan gagal per IP per 15 menit.
  */
 export async function POST(request: NextRequest) {
+  // ── Rate limit ────────────────────────────────────────────────────────
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
+  const rl = checkRateLimit(ip);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Terlalu banyak percobaan. Coba lagi nanti." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfterSec) },
+      }
+    );
+  }
+
+  // ── Parse body ────────────────────────────────────────────────────────
   let password = "";
   try {
     const body = (await request.json()) as { password?: string };
@@ -38,6 +59,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!verifyPassword(password)) {
+    recordFailedAttempt(ip);
     return NextResponse.json({ ok: false, error: "Password salah" }, { status: 401 });
   }
 
@@ -52,7 +74,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  cookies().set(SESSION_COOKIE, token, sessionCookieOptions());
+  resetAttempts(ip);
+  const cookieStore = await cookies();
+  const options = await sessionCookieOptions();
+  cookieStore.set(SESSION_COOKIE, token, options);
   await purgeExpiredSessions();
   return NextResponse.json({ ok: true });
 }

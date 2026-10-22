@@ -26,9 +26,9 @@ const MIME_BY_EXT: Record<string, string> = {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const segments = params.path ?? [];
+  const { path: segments = [] } = await params;
   if (segments.length !== 1) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

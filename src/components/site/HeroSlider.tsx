@@ -17,12 +17,19 @@ export function HeroSlider({ slides }: { slides?: HeroSlide[] }) {
   const [transitioning, setTransitioning] = useState(false);
   const [paused, setPaused] = useState(false);
   const [textVisible, setTextVisible] = useState(true);
-  const [progress, setProgress] = useState(0);
+  // progressKey berubah setiap slide berganti → CSS animation restart otomatis
+  const [progressKey, setProgressKey] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
 
+  // Timeout refs untuk dibersihkan saat unmount
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
+  const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const textTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initTextTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Touch state
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   /* Deteksi prefers-reduced-motion hanya di client */
   useEffect(() => {
@@ -33,22 +40,30 @@ export function HeroSlider({ slides }: { slides?: HeroSlide[] }) {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  /* Cleanup semua timeout/interval saat unmount */
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+      if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current);
+      if (initTextTimeoutRef.current) clearTimeout(initTextTimeoutRef.current);
+    };
+  }, []);
+
   /* Navigasi ke slide target */
   const goTo = useCallback(
-    (target: number, dir?: "next" | "prev") => {
+    (target: number) => {
       if (transitioning || target === current) return;
-      void dir;
       setTransitioning(true);
       setTextVisible(false); // teks lama fade-out lebih dulu
 
       setPrev(current);
-      setTimeout(() => {
+      fadeTimeoutRef.current = setTimeout(() => {
         setCurrent(target);
         setTransitioning(false);
-        setProgress(0);
-        startTimeRef.current = Date.now();
+        setProgressKey((k) => k + 1); // restart CSS progress animation
         // teks baru muncul setelah foto mulai tampil
-        setTimeout(() => setTextVisible(true), 200);
+        textTimeoutRef.current = setTimeout(() => setTextVisible(true), 200);
         setPrev(null);
       }, FADE_DURATION);
     },
@@ -56,12 +71,12 @@ export function HeroSlider({ slides }: { slides?: HeroSlide[] }) {
   );
 
   const goNext = useCallback(
-    () => goTo((current + 1) % activeSlides.length, "next"),
+    () => goTo((current + 1) % activeSlides.length),
     [current, goTo, activeSlides.length]
   );
 
   const goPrev = useCallback(
-    () => goTo((current - 1 + activeSlides.length) % activeSlides.length, "prev"),
+    () => goTo((current - 1 + activeSlides.length) % activeSlides.length),
     [current, goTo, activeSlides.length]
   );
 
@@ -74,27 +89,37 @@ export function HeroSlider({ slides }: { slides?: HeroSlide[] }) {
     };
   }, [goNext, paused, reducedMotion]);
 
-  /* Progress bar */
-  useEffect(() => {
-    if (paused || reducedMotion) {
-      if (progressRef.current) clearInterval(progressRef.current);
-      return;
-    }
-    startTimeRef.current = Date.now();
-    progressRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTimeRef.current;
-      setProgress(Math.min((elapsed / INTERVAL) * 100, 100));
-    }, 50);
-    return () => {
-      if (progressRef.current) clearInterval(progressRef.current);
-    };
-  }, [current, paused, reducedMotion]);
-
   /* Teks muncul saat pertama load */
   useEffect(() => {
-    const t = setTimeout(() => setTextVisible(true), 400);
-    return () => clearTimeout(t);
+    initTextTimeoutRef.current = setTimeout(() => setTextVisible(true), 400);
+    return () => {
+      if (initTextTimeoutRef.current) clearTimeout(initTextTimeoutRef.current);
+    };
   }, []);
+
+  /* Touch: swipe kiri/kanan untuk navigasi, tanpa memblokir scroll vertikal */
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartX.current = t.clientX;
+    touchStartY.current = t.clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX.current;
+      const dy = t.clientY - touchStartY.current;
+      // Hanya trigger swipe bila gerakan lebih horizontal daripada vertikal
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) goNext();
+        else goPrev();
+      }
+      touchStartX.current = null;
+      touchStartY.current = null;
+    },
+    [goNext, goPrev]
+  );
 
   // Pastikan current index tidak out-of-bounds jika slides berubah dinamis
   const safeCurrent = current < activeSlides.length ? current : 0;
@@ -107,6 +132,8 @@ export function HeroSlider({ slides }: { slides?: HeroSlide[] }) {
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* ── Layer foto ─────────────────────────────────────────────── */}
       {/* Foto sebelumnya (fade out) */}
@@ -172,10 +199,19 @@ export function HeroSlider({ slides }: { slides?: HeroSlide[] }) {
             ) : null}
           </div>
 
-          {/* Headline per slide */}
-          <h1 className="display-hero mt-6 whitespace-pre-line font-display text-parchment">
+          {/*
+           * Headline per slide.
+           * Menggunakan <p> bukan <h1> karena:
+           * - Tiap halaman hanya boleh punya satu <h1> (SEO + aksesibilitas)
+           * - <h1> sudah ada di konten utama di bawah hero
+           * - Teks ini bersifat dekoratif/slogan, bukan heading struktural
+           */}
+          <p
+            className="display-hero mt-6 whitespace-pre-line font-display text-parchment"
+            aria-label={slide.headline}
+          >
             {slide.headline}
-          </h1>
+          </p>
 
           {/* Caption per slide */}
           {slide.caption ? (
@@ -267,12 +303,17 @@ export function HeroSlider({ slides }: { slides?: HeroSlide[] }) {
         </div>
       ) : null}
 
-      {/* ── Progress bar ──────────────────────────────────────────── */}
-      {!reducedMotion && (
+      {/* ── Progress bar — CSS animation, bukan JS interval ──────── */}
+      {!reducedMotion && !paused && (
         <div className="hero-progress-track" aria-hidden>
+          {/*
+           * key={progressKey} memaksa React me-remount elemen ini setiap
+           * slide berganti, sehingga CSS animation selalu mulai dari 0.
+           * Tidak ada setInterval 50ms — lebih efisien dan tidak freeze.
+           */}
           <div
-            className="hero-progress-fill"
-            style={{ width: `${progress}%` }}
+            key={progressKey}
+            className="hero-progress-fill hero-progress-fill--animated"
           />
         </div>
       )}

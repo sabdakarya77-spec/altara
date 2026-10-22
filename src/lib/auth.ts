@@ -54,8 +54,8 @@ export function hashToken(token: string): string {
  * tanpa reverse proxy TLS) akan "sukses" tapi cookie-nya tidak pernah dikirim
  * browser — gejalanya: panel admin selalu memantul balik ke halaman login.
  */
-function isSecureRequest(): boolean {
-  const h = headers();
+async function isSecureRequest(): Promise<boolean> {
+  const h = await headers();
   const proto = h.get("x-forwarded-proto");
   if (proto) return proto.split(",")[0].trim() === "https";
   if (h.get("x-forwarded-ssl") === "on") return true;
@@ -68,11 +68,11 @@ function isSecureRequest(): boolean {
 }
 
 /** Set cookie session di respons. */
-export function sessionCookieOptions() {
+export async function sessionCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: isSecureRequest(),
+    secure: await isSecureRequest(),
     path: "/",
     maxAge: SESSION_TTL_HOURS * 60 * 60,
   };
@@ -116,8 +116,9 @@ export async function purgeExpiredSessions(): Promise<void> {
  * Ambil hash session aktif dari cookie request.
  * Mengembalikan null bila tidak ada cookie.
  */
-export function getSessionHashFromCookies(): string | null {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+export async function getSessionHashFromCookies(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return hashToken(token);
 }

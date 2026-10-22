@@ -23,9 +23,10 @@ export async function GET() {
   try {
     await query("SELECT 1");
     return NextResponse.json({ ok: true, database: "up" });
-  } catch (err) {
+  } catch {
+    // Pesan error internal tidak dikembalikan ke klien (information disclosure).
     return NextResponse.json(
-      { ok: false, database: "down", error: (err as Error).message },
+      { ok: false, database: "down" },
       { status: 503 }
     );
   }

@@ -3,6 +3,11 @@ import { getPrograms, getStories, getJournal } from "@/lib/queries";
 
 const BASE = "https://altara.or.id";
 
+/** Slug yang aman untuk URL: tidak ada spasi, tidak ada karakter aneh. */
+function isCleanSlug(slug: string): boolean {
+  return slug.length > 0 && /^[a-z0-9-]+$/.test(slug);
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [programs, stories, journal] = await Promise.all([
     getPrograms(),
@@ -17,28 +22,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 1,
     },
-    {
-      url: `${BASE}/#tentang`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE}/#program`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE}/#transparansi`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
   ];
 
   const programRoutes: MetadataRoute.Sitemap = programs
-    .filter((p) => p.slug)
+    .filter((p) => isCleanSlug(p.slug))
     .map((p) => ({
       url: `${BASE}/program/${p.slug}`,
       lastModified: new Date(),
@@ -47,7 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
 
   const storyRoutes: MetadataRoute.Sitemap = stories
-    .filter((s) => s.slug)
+    .filter((s) => isCleanSlug(s.slug))
     .map((s) => ({
       url: `${BASE}/cerita/${s.slug}`,
       lastModified: new Date(),
@@ -56,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
 
   const journalRoutes: MetadataRoute.Sitemap = journal
-    .filter((j) => j.slug)
+    .filter((j) => isCleanSlug(j.slug))
     .map((j) => ({
       url: `${BASE}/jurnal/${j.slug}`,
       lastModified: new Date(),

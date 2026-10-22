@@ -70,6 +70,9 @@ export async function queryMaybe<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params: unknown[] = []
 ): Promise<T[] | null> {
+  if (!isDatabaseConfigured()) {
+    return null;
+  }
   try {
     return (await query<T>(text, params)) as T[];
   } catch (err) {

@@ -1,4 +1,5 @@
 import { queryMaybe } from "@/lib/db";
+import { slugify } from "@/lib/slug";
 import {
   documents as seedDocuments,
   journal as seedJournal,
@@ -100,7 +101,7 @@ export async function getPrograms(includeDrafts = false): Promise<Program[]> {
       id: i + 1,
       index: p.index,
       title: p.title,
-      slug: p.title.toLowerCase(),
+      slug: slugify(p.title),
       description: p.description,
       image: p.image,
       alt: p.alt,
@@ -136,7 +137,7 @@ export async function getStories(includeDrafts = false): Promise<Story[]> {
       id: i + 1,
       category: s.category,
       title: s.title,
-      slug: s.title.toLowerCase(),
+      slug: slugify(s.title),
       description: s.description,
       image: s.image,
       alt: s.alt,
@@ -200,9 +201,9 @@ export async function getJournal(includeDrafts = false): Promise<JournalPost[]> 
       id: i + 1,
       category: j.category,
       title: j.title,
-      slug: j.title.toLowerCase(),
+      slug: slugify(j.title),
       excerpt: j.excerpt,
-      body: "",
+      body: j.excerpt,
       image: j.image,
       alt: j.alt,
       date: j.date,
@@ -290,7 +291,23 @@ export async function getProgramBySlug(slug: string): Promise<Program | null> {
     "SELECT * FROM programs WHERE slug = $1 AND published LIMIT 1",
     [slug]
   );
-  if (!rows || rows.length === 0) return null;
+  if (rows === null) {
+    const idx = seedPrograms.findIndex((p) => slugify(p.title) === slug);
+    if (idx === -1) return null;
+    const p = seedPrograms[idx];
+    return {
+      id: idx + 1,
+      index: p.index,
+      title: p.title,
+      slug: slugify(p.title),
+      description: p.description,
+      image: p.image,
+      alt: p.alt,
+      published: true,
+      sortOrder: idx,
+    };
+  }
+  if (rows.length === 0) return null;
   const r = rows[0];
   return {
     id: r.id,
@@ -310,7 +327,23 @@ export async function getStoryBySlug(slug: string): Promise<Story | null> {
     "SELECT * FROM stories WHERE slug = $1 AND published LIMIT 1",
     [slug]
   );
-  if (!rows || rows.length === 0) return null;
+  if (rows === null) {
+    const idx = seedStories.findIndex((s) => slugify(s.title) === slug);
+    if (idx === -1) return null;
+    const s = seedStories[idx];
+    return {
+      id: idx + 1,
+      category: s.category,
+      title: s.title,
+      slug: slugify(s.title),
+      description: s.description,
+      image: s.image,
+      alt: s.alt,
+      published: true,
+      sortOrder: idx,
+    };
+  }
+  if (rows.length === 0) return null;
   const r = rows[0];
   return {
     id: r.id,
@@ -330,7 +363,25 @@ export async function getJournalBySlug(slug: string): Promise<JournalPost | null
     "SELECT * FROM journal_posts WHERE slug = $1 AND published LIMIT 1",
     [slug]
   );
-  if (!rows || rows.length === 0) return null;
+  if (rows === null) {
+    const idx = seedJournal.findIndex((j) => slugify(j.title) === slug);
+    if (idx === -1) return null;
+    const j = seedJournal[idx];
+    return {
+      id: idx + 1,
+      category: j.category,
+      title: j.title,
+      slug: slugify(j.title),
+      excerpt: j.excerpt,
+      body: j.excerpt,
+      image: j.image,
+      alt: j.alt,
+      date: j.date,
+      published: true,
+      sortOrder: idx,
+    };
+  }
+  if (rows.length === 0) return null;
   const r = rows[0];
   return {
     id: r.id,

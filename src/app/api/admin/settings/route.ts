@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function ensureAuth(): Promise<boolean> {
-  const hash = getSessionHashFromCookies();
+  const hash = await getSessionHashFromCookies();
   return isSessionValid(hash);
 }
 
@@ -75,6 +75,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     revalidatePath("/");
+    revalidatePath("/program/[slug]", "page");
+    revalidatePath("/cerita/[slug]", "page");
+    revalidatePath("/jurnal/[slug]", "page");
     return NextResponse.json({ success: true, settings });
   } catch (err) {
     console.error("[api/admin/settings] PATCH gagal:", (err as Error).message);

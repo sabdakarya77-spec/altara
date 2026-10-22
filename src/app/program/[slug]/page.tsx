@@ -3,6 +3,9 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getPrograms, getProgramBySlug } from "@/lib/queries";
 
+// slug baru (dibuat lewat panel admin setelah build) tetap dilayani on-demand
+export const dynamicParams = true;
+
 interface Props {
   params: Promise<{ slug: string }>;
 }

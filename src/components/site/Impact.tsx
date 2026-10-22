@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Reveal, SectionHeader } from "./primitives";
 import type { JournalPost, Stat, Story } from "@/lib/queries";
 
@@ -118,7 +119,10 @@ export function JournalSection({ journal }: { journal: JournalPost[] }) {
               delay={i * 90}
               className={`group ${i === 0 ? "lg:col-span-6" : "lg:col-span-3"}`}
             >
-              <a href="#jurnal" className="block">
+              <Link
+                href={post.slug ? `/jurnal/${post.slug}` : "#jurnal"}
+                className="block"
+              >
                 <div className="overflow-hidden">
                   <img
                     src={post.image}
@@ -149,7 +153,7 @@ export function JournalSection({ journal }: { journal: JournalPost[] }) {
                 <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">
                   {post.excerpt}
                 </p>
-              </a>
+              </Link>
             </Reveal>
           ))}
         </div>
@@ -173,7 +177,10 @@ export function StoryGrid({ stories }: { stories: Story[] }) {
               delay={(i % 2) * 90}
               className={`group ${i % 2 === 0 ? "lg:col-span-7" : "lg:col-span-5 lg:mt-16"}`}
             >
-              <a href="#cerita" className="block">
+              <Link
+                href={story.slug ? `/cerita/${story.slug}` : "#cerita"}
+                className="block"
+              >
                 <div className="overflow-hidden">
                   <img
                     src={story.image}
@@ -196,7 +203,7 @@ export function StoryGrid({ stories }: { stories: Story[] }) {
                 <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">
                   {story.description}
                 </p>
-              </a>
+              </Link>
             </Reveal>
           ))}
         </div>

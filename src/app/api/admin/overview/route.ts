@@ -39,8 +39,8 @@ export type OverviewResponse = {
 };
 
 export async function GET() {
-  const hash = getSessionHashFromCookies();
-  if (!isSessionValid(hash)) {
+  const hash = await getSessionHashFromCookies();
+  if (!(await isSessionValid(hash))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

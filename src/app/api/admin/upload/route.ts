@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
-  const hash = getSessionHashFromCookies();
+  const hash = await getSessionHashFromCookies();
   if (!(await isSessionValid(hash))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

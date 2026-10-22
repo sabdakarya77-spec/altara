@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Reveal, SectionHeader } from "./primitives";
 import type { Program } from "@/lib/queries";
 
@@ -108,8 +109,8 @@ export function ProgramList({ programs }: { programs: Program[] }) {
         <div className="relative mt-16 lg:mt-20">
           {programs.map((program, i) => (
             <Reveal key={program.index} delay={i * 90}>
-              <a
-                href="#cerita"
+              <Link
+                href={program.slug ? `/program/${program.slug}` : "#program"}
                 className="hairline group block py-9 transition-colors duration-500 hover:border-ink/60 md:py-12"
               >
                 <div className="grid gap-6 md:grid-cols-12 md:items-baseline md:gap-8">
@@ -135,7 +136,7 @@ export function ProgramList({ programs }: { programs: Program[] }) {
                   loading="lazy"
                   className="mt-7 h-56 w-full object-cover sm:h-72 lg:hidden"
                 />
-              </a>
+              </Link>
             </Reveal>
           ))}
         </div>

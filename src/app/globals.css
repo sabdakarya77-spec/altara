@@ -237,7 +237,14 @@ body {
 .hero-progress-fill {
   height: 100%;
   background: rgba(169, 143, 86, 0.8); /* gold */
-  transition: width 50ms linear;
+}
+/* Versi animasi CSS — dipicu saat element di-remount (key berganti) */
+.hero-progress-fill--animated {
+  animation: progressFill 6000ms linear both;
+}
+@keyframes progressFill {
+  from { width: 0%; }
+  to   { width: 100%; }
 }
 
 /* ── Dots ───────────────────────────────────────────────────────────── */

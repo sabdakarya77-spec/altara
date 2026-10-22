@@ -157,33 +157,33 @@ Tidak ada library animasi. Mekanismenya:
 2. **Komponen `Reveal`** — membungkus children, mengatur `data-visible`, mendukung `delay` dalam milidetik via `transitionDelay`
 3. **Komponen `SectionHeader`** — `eyebrow`, `title`, dan `description`, dibungkus `Reveal`
 4. **CSS** — `.reveal` dan `.image-reveal` di `globals.css`
-5. **Aksesibilitas** — `@media (prefers-reduced-motion: reduce)` memaksa `opacity: 1`, `transform: none`, `clip-path: none`, `transition: none !important`, serta `scroll-behavior: auto`
+5. **Aksesibilitas** — `@media (prefers-reduced-motion: reduce)` memaksa `opacity: 1`, `transform: none`, `clip-path: none`, `transition: none !important`, serta `scroll-behav## 6. Model Data (SAAT INI)
 
-> **Aturan:** halaman baru wajib memakai `Reveal` dan `SectionHeader` yang sudah ada, bukan membuat pola animasi sendiri. Bila butuh gerak baru, tambahkan **utility class** di `globals.css` — jangan menambah dependensi.
----
+Sumber tunggal: **PostgreSQL** (tabel `hero_slides`, `programs`, `stories`, `stats`, `journal_posts`,
+`documents`, `partners`, `sessions`, `settings`). `src/data/content.ts`, `src/data/hero-slides.ts`,
+dan `src/data/settings.ts` kini menjadi fallback terisolasi yang dipakai saat database tidak bisa dijangkau.
 
-## 6. Model Data (SAAT INI)
-
-Sumber tunggal: **PostgreSQL** (tabel `programs`, `stories`, `stats`, `journal_posts`,
-`documents`, `partners`, `sessions`, `settings`). `src/data/content.ts` kini hanya
-fallback yang dipakai saat database tidak bisa dijangkau.
-
-| Tabel | Jumlah | Dipakai oleh |
-| --- | --- | --- |
-| `programs` | 4 | `ProgramList` |
-| `stories` | 4 | `StoryFeature`, `StoryGrid` |
-| `stats` | 4 | `ImpactStats` |
-| `journal_posts` | 3 | `JournalSection` |
-| `documents` | 4 | `Transparency` |
-| `partners` | 6 | `Partners` |
+| Tabel | Jumlah Awal | Dipakai oleh | Keterangan |
+| --- | --- | --- | --- |
+| `hero_slides` | 5 | `HeroSlider` | Foto, headline, caption, crop focal point, Ken Burns |
+| `programs` | 4 | `ProgramList` | Nomor, judul, slug, deskripsi, gambar |
+| `stories` | 4 | `StoryFeature`, `StoryGrid` | Kategori, judul, slug, deskripsi, gambar |
+| `stats` | 4 | `ImpactStats` | Nomor, angka, keterangan dampak, is_placeholder |
+| `journal_posts` | 3 | `JournalSection` | Kategori, judul, slug, ringkasan, isi, cover, tanggal |
+| `documents` | 4 | `Transparency` | Judul berkas, keterangan ukuran/tipe, link berkas |
+| `partners` | 6 | `Partners` | Nama institusi kolaborator, logo |
+| `settings` | 9 | `SupportCTA`, `Footer` | WhatsApp, email, kantor, bank donasi, 6 akun medsos |
+| `sessions` | dinamis | Autentikasi | Hash SHA-256 session token administrator |
 
 Bentuk tipe (lihat `src/lib/queries.ts`):
 
 ```ts
-type Program     = { index, title, slug, description, image, alt, published, sortOrder }
-type Story       = { category, title, slug, description, image, alt, published, sortOrder }
-type Stat        = { index, value, label, sortOrder, isPlaceholder }
-type JournalPost = { category, title, slug, excerpt, body, image, alt, date, published, sortOrder }
+type HeroSlide   = { id, headline, caption, location, imageUrl, alt, objectPosition, kenBurns, sortOrder }
+type Program     = { id, index, title, slug, description, image, alt, published, sortOrder }
+type Story       = { id, category, title, slug, description, image, alt, published, sortOrder }
+type Stat        = { id, index, value, label, sortOrder, isPlaceholder }
+type JournalPost = { id, category, title, slug, excerpt, body, image, alt, date, published, sortOrder }
+type SiteSettings= { contact_whatsapp, contact_email, office_address, bank_name, bank_account_no, bank_account_holder, social_instagram, social_youtube, social_linkedin, social_tiktok, social_facebook, social_x }
 ```
 
 Nilai statistik saat ini (`stats`):
@@ -195,9 +195,7 @@ Nilai statistik saat ini (`stats`):
 | 03 | `34` | Kota & Kabupaten |
 | 04 | `92%` | Dana Langsung ke Program |
 
-> ⚠️ **Angka ini placeholder desain.** Angka lived di tabel `stats` (bukan `settings`) dan
-> ditandai `is_placeholder = true` sehingga situs menandainya "Data contoh". Wajib diganti
-> dengan angka asli dan centang "Masih data contoh" OFF sebelum situs tayang.
+> ⚠️ **Angka ini placeholder desain.** Angka live di tabel `stats` dan dapat disunting langsung di panel admin.
 
 ---
 
@@ -207,18 +205,16 @@ Lokasi: `src/app/admin/` (shell client) + `src/app/api/admin/` (route handlers).
 
 | Aspek | Realita |
 | --- | --- |
-| Koleksi | 6 — Statistik Dampak, Program, Cerita Dampak, Jurnal, Dokumen Publik, Mitra & Pendukung |
-| Operasi | tambah, ubah, toggle publish-draft, hapus |
-| Penyimpanan | **PostgreSQL** via API terotorisasi (`/api/admin/[key]`) |
+| Modul | **Ringkasan (Overview)**, **Hero Slider**, **Statistik Dampak**, **Program**, **Cerita Dampak**, **Jurnal**, **Dokumen Publik**, **Mitra & Pendukung**, **Pengaturan Yayasan** |
+| Overview | Kartu metrik agregat, status koneksi Postgres, tombol Aksi Cepat, dan riwayat pembaruan konten terbaru |
+| Responsivitas | **Mobile Drawer Navigation** (`☰ Menu`) terisolasi untuk kenyamanan admin di smartphone |
+| Quick Preview | Tombol tautan langsung **"Lihat di Web" (`↗`)** pada setiap baris tabel untuk pratinjau halaman publik |
+| Operasi | Tambah, ubah, toggle publish-draft, hapus, dan batch update pengaturan |
+| Penyimpanan | **PostgreSQL** via API terotorisasi (`/api/admin/[key]`, `/api/admin/overview`, `/api/admin/settings`) |
 | Seed | `scripts/seed.ts` — idempoten, **insert-only** (isi yang sudah diedit admin tidak ditimpa) |
 | Autentikasi | Password tunggal dari `ALTARA_ADMIN_PASSWORD`; session di tabel `sessions` (hash SHA-256) |
 | Server | Next.js Route Handlers (Node Runtime) + `revalidatePath("/")` setelah tiap penyimpanan |
 | Gambar | Diunggah ke folder di luar `public/`, dikonversi WebP (sharp), disajikan via `/uploads/[...path]` |
-
-**Satu sumber data:** panel admin menulis ke PostgreSQL, dan beranda membaca
-dari PostgreSQL yang sama. Bila database tidak bisa dijangkau, beranda jatuh ke
-`src/data/content.ts` sebagai fallback (bukan ke state browser). Bila database
-hidup tetapi tabelnya sengaja dikosongkan, tabel kosong itu yang ditampilkan.
 
 ---
 
@@ -239,9 +235,6 @@ Infra container sudah dibangun. Target deployment adalah **container**; VM/host 
 
 Deployment di VM, bukan LXC — Docker dengan overlay2 butuh virtualisasi nested yang bersih. Postgres **tidak pernah** di-expose ke internet, hanya lewat docker network internal (`app` dan `migrate` menjangkau lewat `db:5432`).
 
-Berkas pendukung: `Dockerfile`, `Caddyfile`, `.dockerignore`, `.npmrc` (`node-linker=hoisted` — wajib agar Next dapat menelusuri dependensi saat membuat bundle standalone).
-
-> **Yang wajib ada sebelum production:** backup otomatis dengan restore yang pernah diuji, domain + penerbitan sertifikat, monitoring uptime, serta solusi bila IP homeserver berada di belakang CGNAT (Cloudflare Tunnel atau VPS penghubung).
 ---
 
 ## 9. Decision Log
@@ -256,11 +249,14 @@ Berkas pendukung: `Dockerfile`, `Caddyfile`, `.dockerignore`, `.npmrc` (`node-li
 | 6 | 2026-10-21 | Dokumen dipisah: MASTERPLAN untuk *ada*, ROADMAP untuk *rencana* | Dua audiens berbeda; file lama sudah basi (emerald, 3D, Framer, preview) |
 | 7 | 2026-10-21 | Dokumen dipindah ke `altara-app/docs/` | Masuk version control repo |
 | 8 | 2026-10-21 | **Container adalah target deployment**; VM/host Proxmox hanya tempat menjalankan Docker | Seluruh stack (app, db, caddy, migrate) sudah berada di `docker-compose.yml`; VM bukan syarat arsitektur |
-| 9 | 2026-10-21 | `.npmrc` memakai `node-linker=hoisted` | Build `output: "standalone"` gagal dengan `EPERM ... symlink` saat Next menelusuri symlink `node_modules` milik pnpm; layout hoisted juga menjamin `pg` dan `sharp` ikut tersalin |
-| 10 | 2026-10-21 | Health check dipecah: `/api/health` (liveness) dan `/api/ready` (readiness) | Caddy memakai liveness sebagai `health_uri` — memakai readiness akan menolak semua traffic saat DB mati, padahal situs masih bisa menyajikan fallback statis |
+| 9 | 2026-10-21 | `.npmrc` memakai `node-linker=hoisted` | Build `output: "standalone"` gagal dengan `EPERM ... symlink` saat Next menelusuri symlink `node_modules` milik pnpm |
+| 10 | 2026-10-21 | Health check dipecah: `/api/health` (liveness) dan `/api/ready` (readiness) | Caddy memakai liveness sebagai `health_uri` — memakai readiness akan menolak semua traffic saat DB mati |
 | 11 | 2026-10-22 | Hero Slider ultra modern menggantikan hero statis | Ken Burns CSS fade, 5 slide terkurasi, autoplay 6s dengan pause on hover/focus, `prefers-reduced-motion` compliance, objectPosition per slide |
 | 12 | 2026-10-22 | Implementasi SEO & Route Publik Dinamis | Canonical URL, OG 1200x630, JSON-LD NGO schema, `sitemap.ts`, `robots.ts`, dan route publik dinamis `/program/[slug]`, `/cerita/[slug]`, `/jurnal/[slug]` |
-| 13 | 2026-10-22 | Pemisahan Mobile Menu Overlay & Perapian Mobile Hero | Mengeluarkan fixed mobile menu dari header ber-`backdrop-blur` agar latar `#F5F2EC` solid dan tidak tembus; menampilkan "Abdi Laksata Raya" di mobile Lockup; hero mobile 100svh dan lokasi disematkan di eyebrow |
+| 13 | 2026-10-22 | Pemisahan Mobile Menu Overlay & Perapian Mobile Hero | Mengeluarkan fixed mobile menu dari header ber-`backdrop-blur` agar latar `#F5F2EC` solid dan tidak tembus |
+| 14 | 2026-10-22 | Migrasi Hero Slider ke PostgreSQL & Form Admin Dinamis | Tabel `hero_slides` (migrasi 002) memungkinkan admin mengganti foto, headline, crop objectPosition, dan efek Ken Burns secara mandiri |
+| 15 | 2026-10-22 | Modul Pengaturan Yayasan & Integrasi Publik | Tabel `settings` key-value mengelola kontak WhatsApp resmi, email, rekening bank donasi resmi, serta 6 akun media sosial resmi dengan graceful degradation di beranda dan footer |
+| 16 | 2026-10-22 | Dashboard Overview, Mobile Drawer, dan Quick Preview Web | Beranda admin ringkasan metrik agregat, aksi cepat satu-klik, drawer navigasi mobile smartphone, dan tombol `Lihat di Web ↗` per entri |
 
 ---
 
@@ -271,6 +267,10 @@ Setiap perubahan harus memenuhi:
 - ✅ `pnpm build` sukses, tanpa error
 - ✅ Tidak ada perubahan visual pada beranda tanpa persetujuan owner
 - ✅ Token warna dan font di Bab 1 tidak berubah
+- ✅ Tidak menambah dependensi runtime tanpa entri Decision Log
+- ✅ Animasi baru memakai utility yang ada dan tetap menghormati `prefers-reduced-motion`
+- ✅ Konten baru masuk lewat `src/data/content.ts` lalu dipindahkan ke Postgres lewat `pnpm db:seed`
+�� Token warna dan font di Bab 1 tidak berubah
 - ✅ Tidak menambah dependensi runtime tanpa entri Decision Log
 - ✅ Animasi baru memakai utility yang ada dan tetap menghormati `prefers-reduced-motion`
 - ✅ Konten baru masuk lewat `src/data/content.ts` lalu dipindahkan ke Postgres lewat `pnpm db:seed`

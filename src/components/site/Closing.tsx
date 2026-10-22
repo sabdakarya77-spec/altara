@@ -171,17 +171,23 @@ export function SupportCTA({ settings }: { settings?: SiteSettings }) {
           ) : null}
 
           <Reveal delay={200} className="mt-10 flex flex-col gap-3 sm:flex-row sm:gap-4">
-            <a
-              href={waUrl}
-              target={settings?.contact_whatsapp ? "_blank" : undefined}
-              rel={settings?.contact_whatsapp ? "noopener noreferrer" : undefined}
-              className="bg-ivory px-8 py-4 text-center text-[0.72rem] uppercase tracking-[0.18em] text-ink transition-colors hover:bg-parchment"
-            >
-              Konfirmasi Donasi via WA
-            </a>
+            {settings?.contact_whatsapp ? (
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-ivory px-8 py-4 text-center text-[0.72rem] uppercase tracking-[0.18em] text-ink transition-colors hover:bg-parchment"
+              >
+                Konfirmasi Donasi via WA
+              </a>
+            ) : null}
             <a
               href="#transparansi"
-              className="border border-parchment/40 px-8 py-4 text-center text-[0.72rem] uppercase tracking-[0.18em] text-parchment transition-colors hover:border-parchment hover:bg-parchment/10"
+              className={
+                settings?.contact_whatsapp
+                  ? "border border-parchment/40 px-8 py-4 text-center text-[0.72rem] uppercase tracking-[0.18em] text-parchment transition-colors hover:border-parchment hover:bg-parchment/10"
+                  : "bg-ivory px-8 py-4 text-center text-[0.72rem] uppercase tracking-[0.18em] text-ink transition-colors hover:bg-parchment"
+              }
             >
               Bicarakan Kemitraan
             </a>
