@@ -20,6 +20,7 @@ import {
   stats as seedStats,
   stories as seedStories,
 } from "../src/data/content";
+import { DEFAULT_CAMPAIGNS } from "../src/data/campaigns";
 
 const seedHeroSlides = [
   {
@@ -214,6 +215,32 @@ async function main() {
        VALUES ($1, $2)
        ON CONFLICT (key) DO NOTHING`,
       [key, value]
+    );
+  }
+
+  // Campaigns — insert-only bila slug belum ada
+  for (let i = 0; i < DEFAULT_CAMPAIGNS.length; i++) {
+    const c = DEFAULT_CAMPAIGNS[i];
+    await client.query(
+      `INSERT INTO campaigns (title, slug, category, short_desc, description, image_url, target_amount, collected_amount, donor_count, start_date, end_date, published, featured, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       ON CONFLICT (slug) DO NOTHING`,
+      [
+        c.title,
+        c.slug,
+        c.category,
+        c.short_desc,
+        c.description,
+        c.image_url,
+        c.target_amount,
+        c.collected_amount,
+        c.donor_count,
+        c.start_date,
+        c.end_date,
+        c.published,
+        c.featured,
+        i,
+      ]
     );
   }
 

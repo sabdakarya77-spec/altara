@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getPrograms, getStories, getJournal } from "@/lib/queries";
+import { getPrograms, getStories, getJournal, getCampaigns } from "@/lib/queries";
 
 const BASE = "https://altara.or.id";
 
@@ -9,10 +9,11 @@ function isCleanSlug(slug: string): boolean {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [programs, stories, journal] = await Promise.all([
+  const [programs, stories, journal, campaigns] = await Promise.all([
     getPrograms(),
     getStories(),
     getJournal(),
+    getCampaigns(),
   ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -21,6 +22,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1,
+    },
+    {
+      url: `${BASE}/donasi`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
     },
   ];
 
@@ -51,5 +58,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.65,
     }));
 
-  return [...staticRoutes, ...programRoutes, ...storyRoutes, ...journalRoutes];
+  const campaignRoutes: MetadataRoute.Sitemap = campaigns
+    .filter((c) => isCleanSlug(c.slug))
+    .map((c) => ({
+      url: `${BASE}/donasi/${c.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+
+  return [...staticRoutes, ...programRoutes, ...storyRoutes, ...journalRoutes, ...campaignRoutes];
 }

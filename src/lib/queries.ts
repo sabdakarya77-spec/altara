@@ -460,4 +460,71 @@ export async function getSettings(): Promise<SiteSettings> {
   return result;
 }
 
+/* ─── Program Donasi (Campaigns) ────────────────────────────────────── */
+
+export type { Campaign, Donation, DonationStatus } from "@/data/campaigns";
+export { DEFAULT_CAMPAIGNS, formatRupiah } from "@/data/campaigns";
+import { DEFAULT_CAMPAIGNS, type Campaign } from "@/data/campaigns";
+
+type CampaignRow = {
+  id: number;
+  title: string;
+  slug: string;
+  category: string;
+  short_desc: string;
+  description: string;
+  image_url: string;
+  target_amount: string | number;
+  collected_amount: string | number;
+  donor_count: number;
+  start_date: Date | string;
+  end_date: Date | string | null;
+  published: boolean;
+  featured: boolean;
+  sort_order: number;
+};
+
+function mapCampaign(r: CampaignRow): Campaign {
+  return {
+    id: r.id,
+    title: r.title,
+    slug: r.slug,
+    category: (r.category as Campaign["category"]) || "Umum",
+    short_desc: r.short_desc || "",
+    description: r.description || "",
+    image_url: r.image_url || "",
+    target_amount: Number(r.target_amount || 0),
+    collected_amount: Number(r.collected_amount || 0),
+    donor_count: Number(r.donor_count || 0),
+    start_date: typeof r.start_date === "string" ? r.start_date : new Date(r.start_date).toISOString(),
+    end_date: r.end_date ? (typeof r.end_date === "string" ? r.end_date : new Date(r.end_date).toISOString()) : null,
+    published: r.published,
+    featured: r.featured,
+    sort_order: r.sort_order,
+  };
+}
+
+export async function getCampaigns(includeDrafts = false): Promise<Campaign[]> {
+  const sql = includeDrafts
+    ? "SELECT * FROM campaigns ORDER BY sort_order, id"
+    : "SELECT * FROM campaigns WHERE published ORDER BY sort_order, id";
+  const rows = await queryMaybe<CampaignRow>(sql);
+  if (!rows || rows.length === 0) {
+    return includeDrafts ? DEFAULT_CAMPAIGNS : DEFAULT_CAMPAIGNS.filter((c) => c.published);
+  }
+  return rows.map(mapCampaign);
+}
+
+export async function getCampaignBySlug(slug: string): Promise<Campaign | null> {
+  const rows = await queryMaybe<CampaignRow>(
+    "SELECT * FROM campaigns WHERE slug = $1",
+    [slug]
+  );
+  if (rows && rows.length > 0) {
+    return mapCampaign(rows[0]);
+  }
+  return DEFAULT_CAMPAIGNS.find((c) => c.slug === slug) ?? null;
+}
+
+
 

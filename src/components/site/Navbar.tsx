@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { Lockup } from "./primitives";
 
 const links = [
-  { label: "Tentang", href: "#tentang" },
-  { label: "Program", href: "#program" },
-  { label: "Dampak", href: "#dampak" },
-  { label: "Cerita", href: "#cerita" },
-  { label: "Jurnal", href: "#jurnal" },
-  { label: "Transparansi", href: "#transparansi" },
+  { label: "Tentang", href: "/#tentang" },
+  { label: "Program", href: "/#program" },
+  { label: "Donasi", href: "/donasi" },
+  { label: "Dampak", href: "/#dampak" },
+  { label: "Cerita", href: "/#cerita" },
+  { label: "Jurnal", href: "/#jurnal" },
+  { label: "Transparansi", href: "/#transparansi" },
 ];
 
 export function Navbar() {
@@ -50,9 +51,9 @@ export function Navbar() {
             }`}
           >
             <a
-              href="#top"
+              href="/"
               className="flex min-w-0 items-center gap-3 transition-colors duration-500"
-              aria-label="Yayasan Abdi Laksata Raya — kembali ke atas"
+              aria-label="Yayasan Abdi Laksata Raya — kembali ke beranda"
             >
               <Lockup tone={open ? "dark" : onHero ? "light" : "dark"} priority />
             </a>
