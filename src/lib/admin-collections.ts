@@ -70,8 +70,6 @@ export const WRITABLE: Record<Collection, string[]> = {
     "description",
     "image_url",
     "target_amount",
-    "collected_amount",
-    "donor_count",
     "is_placeholder",
     "start_date",
     "end_date",

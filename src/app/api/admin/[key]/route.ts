@@ -172,6 +172,13 @@ export async function POST(
     return NextResponse.json({ error: "Koleksi tidak dikenal" }, { status: 404 });
   }
 
+  if (key === "donations") {
+    return NextResponse.json(
+      { error: "Pencatatan donasi baru hanya melalui formulir donasi publik." },
+      { status: 405 }
+    );
+  }
+
   const body = await readJson(request);
   if (!body) {
     return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
@@ -242,14 +249,6 @@ export async function PATCH(
     const collection = key;
     const table = TABLE_BY_COLLECTION[collection];
     const allowed = WRITABLE[collection];
-
-    // Ambil data baris lama untuk memeriksa perubahan berkas media
-    const oldRowRes = await pool.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
-    const oldRow = oldRowRes.rows[0];
-    if (!oldRow) {
-      return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
-    }
-
     const values: Record<string, unknown> = {};
     for (const column of allowed) {
       if (column in body) values[column] = sanitizeValue(column, body[column]);
@@ -258,62 +257,109 @@ export async function PATCH(
       return NextResponse.json({ error: "Tidak ada perubahan" }, { status: 400 });
     }
 
-    const assignments = Object.keys(values).map((c, i) => `${c} = $${i + 1}`);
-    const paramList = Object.values(values);
-    paramList.push(id);
-    const sql = `UPDATE ${table} SET ${assignments.join(", ")}, updated_at = now()
-                WHERE id = $${paramList.length}
-                RETURNING *`;
-    const res = await pool.query(sql, paramList);
+    // Validasi whitelist nilai status donasi
+    if (collection === "donations" && "status" in values) {
+      const ALLOWED_STATUSES = ["pending", "settlement", "cancel", "expire"];
+      if (typeof values.status !== "string" || !ALLOWED_STATUSES.includes(values.status)) {
+        return NextResponse.json(
+          { error: `Status donasi tidak valid. Harus salah satu dari: ${ALLOWED_STATUSES.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
 
-    if (res.rows.length === 0) {
-      return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
+    const client = await pool.connect();
+    let updatedRow: Record<string, unknown> | null = null;
+    let oldRow: Record<string, unknown> | null = null;
+
+    try {
+      await client.query("BEGIN");
+
+      // Kunci baris donasi saat diupdate untuk mencegah race condition / double count
+      const selectSql =
+        collection === "donations"
+          ? `SELECT * FROM ${table} WHERE id = $1 FOR UPDATE`
+          : `SELECT * FROM ${table} WHERE id = $1`;
+      const oldRowRes = await client.query(selectSql, [id]);
+      oldRow = oldRowRes.rows[0];
+      if (!oldRow) {
+        await client.query("ROLLBACK");
+        return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
+      }
+
+      const assignments = Object.keys(values).map((c, i) => `${c} = $${i + 1}`);
+      const paramList = Object.values(values);
+      paramList.push(id);
+      const sql = `UPDATE ${table} SET ${assignments.join(", ")}, updated_at = now()
+                  WHERE id = $${paramList.length}
+                  RETURNING *`;
+      const res = await client.query(sql, paramList);
+
+      if (res.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return NextResponse.json({ error: "Entri tidak ditemukan" }, { status: 404 });
+      }
+      updatedRow = res.rows[0];
+
+      // Jika status donasi diubah, sinkronkan metrik kampanye secara otomatis dalam transaksi yang sama
+      if (collection === "donations" && oldRow.campaign_id && "status" in values) {
+        const amountVal = Number(oldRow.amount || 0);
+        if (oldRow.status !== "settlement" && values.status === "settlement") {
+          await client.query(
+            `UPDATE campaigns
+             SET collected_amount = collected_amount + $1,
+                 donor_count = donor_count + 1,
+                 updated_at = now()
+             WHERE id = $2`,
+            [amountVal, oldRow.campaign_id]
+          );
+        } else if (oldRow.status === "settlement" && values.status !== "settlement") {
+          await client.query(
+            `UPDATE campaigns
+             SET collected_amount = GREATEST(0, collected_amount - $1),
+                 donor_count = GREATEST(0, donor_count - 1),
+                 updated_at = now()
+             WHERE id = $2`,
+            [amountVal, oldRow.campaign_id]
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+    } catch (txErr) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw txErr;
+    } finally {
+      client.release();
+    }
+
+    if (!updatedRow) {
+      return NextResponse.json({ error: "Gagal memperbarui data" }, { status: 500 });
     }
 
     // Bersihkan berkas media lama di disk jika kolom gambar diubah ke berkas baru
-    const MEDIA_COLS = ["image", "image_url", "cover_image", "logo_url", "file_url"];
-    for (const col of MEDIA_COLS) {
-      if (col in values) {
-        const oldFile = oldRow[col];
-        const newFile = values[col];
-        if (
-          typeof oldFile === "string" &&
-          oldFile.startsWith("/uploads/") &&
-          oldFile !== newFile
-        ) {
-          void deleteFile(oldFile);
+    if (oldRow) {
+      const MEDIA_COLS = ["image", "image_url", "cover_image", "logo_url", "file_url"];
+      for (const col of MEDIA_COLS) {
+        if (col in values) {
+          const oldFile = oldRow[col];
+          const newFile = values[col];
+          if (
+            typeof oldFile === "string" &&
+            oldFile.startsWith("/uploads/") &&
+            oldFile !== newFile
+          ) {
+            void deleteFile(oldFile);
+          }
         }
       }
     }
 
-    // Jika status donasi diubah, sinkronkan metrik kampanye secara otomatis
-    if (collection === "donations" && oldRow.campaign_id && "status" in values) {
-      const amountVal = Number(oldRow.amount || 0);
-      if (oldRow.status !== "settlement" && values.status === "settlement") {
-        await pool.query(
-          `UPDATE campaigns
-           SET collected_amount = collected_amount + $1,
-               donor_count = donor_count + 1,
-               updated_at = now()
-           WHERE id = $2`,
-          [amountVal, oldRow.campaign_id]
-        );
-        revalidatePath("/donasi");
-      } else if (oldRow.status === "settlement" && values.status !== "settlement") {
-        await pool.query(
-          `UPDATE campaigns
-           SET collected_amount = GREATEST(0, collected_amount - $1),
-               donor_count = GREATEST(0, donor_count - 1),
-               updated_at = now()
-           WHERE id = $2`,
-          [amountVal, oldRow.campaign_id]
-        );
-        revalidatePath("/donasi");
-      }
+    if (collection === "donations") {
+      revalidatePath("/donasi");
     }
-
-    revalidateDetailPaths(collection, typeof res.rows[0]?.slug === "string" ? res.rows[0].slug : undefined);
-    return NextResponse.json({ row: res.rows[0] });
+    revalidateDetailPaths(collection, typeof updatedRow?.slug === "string" ? updatedRow.slug : undefined);
+    return NextResponse.json({ row: updatedRow });
   } catch (err) {
     console.error("[api/admin] PATCH gagal:", (err as Error).message);
     return NextResponse.json({ error: describeDbError(err) }, { status: 500 });
@@ -329,6 +375,16 @@ export async function DELETE(
   const { key } = await params;
   if (!isCollection(key)) {
     return NextResponse.json({ error: "Koleksi tidak dikenal" }, { status: 404 });
+  }
+
+  if (key === "donations") {
+    return NextResponse.json(
+      {
+        error:
+          "Data transaksi donasi tidak dapat dihapus demi kepatuhan audit pembukuan dan retensi data hukum (UU PDP). Jika donasi dibatalkan, ubah status menjadi 'cancel'.",
+      },
+      { status: 405 }
+    );
   }
 
   const body = await readJson(request);

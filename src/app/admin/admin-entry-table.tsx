@@ -104,12 +104,14 @@ export function EntryTable({
                         {row.published ? "Draft" : "Terbit"}
                       </button>
                     ) : null}
-                    <button
-                      onClick={() => onRemove(row)}
-                      className="rounded border border-line px-2 py-1 text-xs text-red-800 transition-colors hover:border-red-900/40 hover:bg-red-50"
-                    >
-                      Hapus
-                    </button>
+                    {collectionKey !== "donations" ? (
+                      <button
+                        onClick={() => onRemove(row)}
+                        className="rounded border border-line px-2 py-1 text-xs text-red-800 transition-colors hover:border-red-900/40 hover:bg-red-50"
+                      >
+                        Hapus
+                      </button>
+                    ) : null}
                   </td>
                 </tr>
               );

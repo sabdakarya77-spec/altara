@@ -26,6 +26,8 @@ export type Field = {
   options?: string[];
   /** Tampilkan kolom ini di tabel daftar. */
   inTable?: boolean;
+  /** Kolom hanya baca (tampil tapi tidak dapat diedit dan tidak dikirim ke server). */
+  readOnly?: boolean;
   /** Tidak boleh kosong saat disimpan. */
   required?: boolean;
   /** Baris baru di dalam textarea. */
@@ -109,8 +111,22 @@ export const COLLECTIONS: CollectionConfig[] = [
         required: true,
       },
       { column: "target_amount", label: "Target Donasi (Rp)", type: "number", inTable: true, hint: "Nominal angka tanpa titik (0 untuk donasi terbuka)." },
-      { column: "collected_amount", label: "Dana Terkumpul (Rp)", type: "number", inTable: true, hint: "Total donasi yang berhasil dihimpun / terverifikasi." },
-      { column: "donor_count", label: "Jumlah Donatur", type: "number", inTable: true, hint: "Total donatur yang telah menyalurkan donasi." },
+      {
+        column: "collected_amount",
+        label: "Dana Terkumpul (Rp)",
+        type: "number",
+        inTable: true,
+        readOnly: true,
+        hint: "Dihitung otomatis oleh sistem dari donasi terverifikasi (settlement).",
+      },
+      {
+        column: "donor_count",
+        label: "Jumlah Donatur",
+        type: "number",
+        inTable: true,
+        readOnly: true,
+        hint: "Dihitung otomatis oleh sistem dari donasi terverifikasi (settlement).",
+      },
       {
         column: "is_placeholder",
         label: "Program Simulasi / Contoh",
@@ -131,10 +147,10 @@ export const COLLECTIONS: CollectionConfig[] = [
     label: "Donasi Masuk",
     titleColumn: "order_id",
     fields: [
-      { column: "order_id", label: "Kode Referensi", type: "text", inTable: true },
-      { column: "campaign_title", label: "Program Kampanye", type: "text", inTable: true },
-      { column: "donor_name", label: "Nama Donatur", type: "text", inTable: true },
-      { column: "amount", label: "Nominal (Rp)", type: "number", inTable: true },
+      { column: "order_id", label: "Kode Referensi", type: "text", inTable: true, readOnly: true },
+      { column: "campaign_title", label: "Program Kampanye", type: "text", inTable: true, readOnly: true },
+      { column: "donor_name", label: "Nama Donatur", type: "text", inTable: true, readOnly: true },
+      { column: "amount", label: "Nominal (Rp)", type: "number", inTable: true, readOnly: true },
       {
         column: "status",
         label: "Status Donasi",
@@ -144,12 +160,12 @@ export const COLLECTIONS: CollectionConfig[] = [
         required: true,
         hint: "Ubah ke 'settlement' setelah transfer diverifikasi di mutasi bank. Sistem akan otomatis menambahkan saldo & donatur kampanye.",
       },
-      { column: "donor_email", label: "Email Donatur", type: "text", inTable: true },
-      { column: "donor_phone", label: "No. HP / WA", type: "text", inTable: true },
-      { column: "is_anonymous", label: "Anonim", type: "boolean", inTable: true },
-      { column: "payment_method", label: "Metode Bayar", type: "text" },
-      { column: "message", label: "Pesan / Doa Donatur", type: "textarea", rows: 3 },
-      { column: "created_at", label: "Waktu Transaksi", type: "date", inTable: true },
+      { column: "donor_email", label: "Email Donatur", type: "text", inTable: true, readOnly: true },
+      { column: "donor_phone", label: "No. HP / WA", type: "text", inTable: true, readOnly: true },
+      { column: "is_anonymous", label: "Anonim", type: "boolean", inTable: true, readOnly: true },
+      { column: "payment_method", label: "Metode Bayar", type: "text", readOnly: true },
+      { column: "message", label: "Pesan / Doa Donatur", type: "textarea", rows: 3, readOnly: true },
+      { column: "created_at", label: "Waktu Transaksi", type: "date", inTable: true, readOnly: true },
     ],
   },
   {
