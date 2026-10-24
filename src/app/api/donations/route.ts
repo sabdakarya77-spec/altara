@@ -48,7 +48,75 @@ function generateOrderCode(): string {
   return `ALTR-${dateStr}-${rand}`;
 }
 
+/**
+ * Memverifikasi apakah request berasal dari origin / domain yang sah (aplikasi ALTARA).
+ * Mencegah Cross-Site Request Forgery (CSRF) dan penyalahgunaan request lintas situs.
+ */
+function isValidRequestOrigin(request: NextRequest): boolean {
+  // Cek metadata Sec-Fetch-Site (dikirimkan oleh browser modern)
+  const secFetchSite = request.headers.get("sec-fetch-site");
+  if (secFetchSite && secFetchSite === "cross-site") {
+    return false;
+  }
+
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
+
+  // Jika tidak ada origin maupun referer (misal: non-browser/curl di lingkungan development)
+  if (!origin && !referer) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  const allowedHosts = new Set<string>();
+
+  const hostHeader = request.headers.get("host");
+  if (hostHeader) allowedHosts.add(hostHeader.toLowerCase());
+
+  const xForwardedHost = request.headers.get("x-forwarded-host");
+  if (xForwardedHost) {
+    const fHost = xForwardedHost.split(",")[0]?.trim();
+    if (fHost) allowedHosts.add(fHost.toLowerCase());
+  }
+
+  const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) {
+    try {
+      allowedHosts.add(new URL(siteUrl).host.toLowerCase());
+    } catch {
+      // Abaikan bila URL env salah format
+    }
+  }
+
+  if (origin) {
+    try {
+      const originHost = new URL(origin).host.toLowerCase();
+      return allowedHosts.has(originHost);
+    } catch {
+      return false;
+    }
+  }
+
+  if (referer) {
+    try {
+      const refererHost = new URL(referer).host.toLowerCase();
+      return allowedHosts.has(refererHost);
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 export async function POST(request: NextRequest) {
+  // 0. Proteksi Cross-Origin / CSRF
+  if (!isValidRequestOrigin(request)) {
+    return NextResponse.json(
+      { error: "Permintaan ditolak: origin atau sumber request tidak sah." },
+      { status: 403 }
+    );
+  }
+
   // 1. Rate Limiting berbasis IP klien (maksimal 10 request donasi per 10 menit per IP)
   const clientIp = getClientIp(request);
   const rateCheck = checkPublicRateLimit(`donations:${clientIp}`, 10, 10 * 60 * 1000);

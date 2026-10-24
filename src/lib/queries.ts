@@ -519,14 +519,11 @@ export async function getCampaigns(includeDrafts = false): Promise<Campaign[]> {
 
 export async function getCampaignBySlug(slug: string): Promise<Campaign | null> {
   const rows = await queryMaybe<CampaignRow>(
-    "SELECT * FROM campaigns WHERE slug = $1",
+    "SELECT * FROM campaigns WHERE slug = $1 AND published = true",
     [slug]
   );
   if (rows && rows.length > 0) {
     return mapCampaign(rows[0]);
   }
-  return DEFAULT_CAMPAIGNS.find((c) => c.slug === slug) ?? null;
+  return DEFAULT_CAMPAIGNS.find((c) => c.slug === slug && c.published) ?? null;
 }
-
-
-

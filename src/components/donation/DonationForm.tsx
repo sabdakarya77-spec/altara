@@ -23,6 +23,7 @@ export function DonationForm({ campaign, settings }: Props) {
   const [donorEmail, setDonorEmail] = useState("");
   const [donorPhone, setDonorPhone] = useState("");
   const [message, setMessage] = useState("");
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
 
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
@@ -64,6 +65,13 @@ export function DonationForm({ campaign, settings }: Props) {
 
     if (!donorEmail.trim()) {
       setErrorMessage("Email wajib diisi untuk tanda terima donasi resmi.");
+      return;
+    }
+
+    if (!agreedPrivacy) {
+      setErrorMessage(
+        "Mohon setujui klausul pemrosesan data kontak donatur untuk melanjutkan."
+      );
       return;
     }
 
@@ -438,6 +446,34 @@ export function DonationForm({ campaign, settings }: Props) {
           </div>
         </div>
 
+        {/* Klausul Persetujuan Kebijakan Privasi (UU PDP No. 27/2022) */}
+        <div className="rounded-sm border border-line/80 bg-ivory/70 p-3 sm:p-3.5">
+          <label className="flex items-start gap-2.5 cursor-pointer text-xs text-muted hover:text-ink leading-relaxed">
+            <input
+              type="checkbox"
+              checked={agreedPrivacy}
+              onChange={(e) => {
+                setAgreedPrivacy(e.target.checked);
+                if (e.target.checked && errorMessage.includes("kebijakan privasi")) {
+                  setErrorMessage("");
+                }
+              }}
+              className="mt-0.5 h-4 w-4 rounded border-line text-forest focus:ring-forest cursor-pointer"
+            />
+            <span>
+              Saya menyetujui pemrosesan data kontak untuk keperluan verifikasi donasi, penerbitan tanda terima resmi, dan komunikasi yayasan sesuai ketentuan{" "}
+              <Link
+                href="/kebijakan-privasi"
+                className="text-forest underline hover:text-ink transition-colors font-medium"
+                target="_blank"
+              >
+                Kebijakan Privasi
+              </Link>{" "}
+              (UU PDP No. 27/2022).
+            </span>
+          </label>
+        </div>
+
         {/* Ringkasan & Tombol Aksi */}
         {errorMessage && (
           <div className="rounded-sm border border-red-200 bg-red-50 p-3 text-xs text-red-700">
@@ -455,22 +491,14 @@ export function DonationForm({ campaign, settings }: Props) {
 
           <button
             type="submit"
-            disabled={isSubmitting || effectiveAmount < 10_000}
+            disabled={isSubmitting || effectiveAmount < 10_000 || !agreedPrivacy}
             className="w-full rounded-sm bg-forest py-3.5 px-4 text-center text-xs font-semibold uppercase tracking-[0.18em] text-parchment shadow-sm transition-all duration-300 hover:bg-forest/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Memproses Donasi..." : "Lanjutkan Donasi (Transfer Manual) →"}
           </button>
 
           <p className="mt-3 text-center text-[0.68rem] text-muted leading-relaxed">
-            🔒 Donasi disalurkan langsung ke rekening resmi Yayasan Abdi Laksata Raya. Data kontak Anda dilindungi dan semata-mata digunakan untuk konfirmasi donasi resmi sesuai{" "}
-            <Link
-              href="/kebijakan-privasi"
-              className="text-forest underline hover:text-ink transition-colors"
-              target="_blank"
-            >
-              Kebijakan Privasi
-            </Link>{" "}
-            kami.
+            🔒 Donasi disalurkan langsung ke rekening resmi Yayasan Abdi Laksata Raya. Data kontak Anda dilindungi dan semata-mata digunakan untuk konfirmasi donasi resmi.
           </p>
         </div>
       </form>
