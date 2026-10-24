@@ -9,6 +9,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { checkRateLimit, recordFailedAttempt, resetAttempts } from "@/lib/rate-limit";
+import { recordAuditLog, getClientIp } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,10 +26,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: NextRequest) {
   // ── Rate limit ────────────────────────────────────────────────────────
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = getClientIp(request);
 
   const rl = checkRateLimit(ip);
   if (!rl.allowed) {
@@ -60,6 +58,12 @@ export async function POST(request: NextRequest) {
 
   if (!verifyPassword(password)) {
     recordFailedAttempt(ip);
+    void recordAuditLog({
+      action: "AUTH_LOGIN_FAILED",
+      entityType: "auth",
+      actorIp: ip,
+      details: { reason: "invalid_password" },
+    });
     return NextResponse.json({ ok: false, error: "Password salah" }, { status: 401 });
   }
 
@@ -79,5 +83,13 @@ export async function POST(request: NextRequest) {
   const options = await sessionCookieOptions();
   cookieStore.set(SESSION_COOKIE, token, options);
   await purgeExpiredSessions();
+
+  void recordAuditLog({
+    action: "AUTH_LOGIN",
+    entityType: "auth",
+    actorIp: ip,
+    details: { user_agent: request.headers.get("user-agent")?.slice(0, 200) || "unknown" },
+  });
+
   return NextResponse.json({ ok: true });
 }

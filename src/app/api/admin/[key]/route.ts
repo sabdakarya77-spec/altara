@@ -4,6 +4,7 @@ import { getSessionHashFromCookies, isSessionValid } from "@/lib/auth";
 import { getPool } from "@/lib/db";
 import { uniqueSlug } from "@/lib/slug";
 import { deleteFile } from "@/lib/storage";
+import { recordAuditLog, getClientIp } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -213,9 +214,21 @@ export async function POST(
                 VALUES (${placeholders})
                 RETURNING *`;
     const res = await pool.query(sql, columns.map((c) => values[c]));
+    const created = res.rows[0];
+
+    void recordAuditLog({
+      action: "ENTRY_CREATE",
+      entityType: collection,
+      entityId: created?.id,
+      actorIp: getClientIp(request),
+      details: {
+        title: created?.title ?? created?.name ?? created?.headline ?? "Entri Baru",
+        slug: created?.slug,
+      },
+    });
 
     revalidateDetailPaths(collection, typeof values.slug === "string" ? values.slug : undefined);
-    return NextResponse.json({ row: res.rows[0] }, { status: 201 });
+    return NextResponse.json({ row: created }, { status: 201 });
   } catch (err) {
     console.error("[api/admin] POST gagal:", (err as Error).message);
     return NextResponse.json({ error: describeDbError(err) }, { status: 500 });
@@ -325,6 +338,35 @@ export async function PATCH(
         }
       }
 
+      if (collection === "donations" && "status" in values) {
+        await recordAuditLog({
+          action: "DONATION_STATUS_UPDATE",
+          entityType: "donations",
+          entityId: String(oldRow.order_id || oldRow.id),
+          actorIp: getClientIp(request),
+          details: {
+            order_id: oldRow.order_id,
+            old_status: oldRow.status,
+            new_status: values.status,
+            amount: oldRow.amount,
+            campaign_id: oldRow.campaign_id,
+          },
+          client,
+        });
+      } else {
+        await recordAuditLog({
+          action: "ENTRY_UPDATE",
+          entityType: collection,
+          entityId: String(id),
+          actorIp: getClientIp(request),
+          details: {
+            updated_fields: Object.keys(values),
+            title: updatedRow?.title ?? updatedRow?.name ?? updatedRow?.headline,
+          },
+          client,
+        });
+      }
+
       await client.query("COMMIT");
     } catch (txErr) {
       await client.query("ROLLBACK").catch(() => {});
@@ -416,6 +458,18 @@ export async function DELETE(
     }
 
     revalidateDetailPaths(key);
+
+    void recordAuditLog({
+      action: "ENTRY_DELETE",
+      entityType: key,
+      entityId: String(id),
+      actorIp: getClientIp(request),
+      details: {
+        title: deletedRow?.title ?? deletedRow?.name ?? deletedRow?.headline,
+        slug: deletedRow?.slug,
+      },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[api/admin] DELETE gagal:", (err as Error).message);

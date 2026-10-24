@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getSessionHashFromCookies, isSessionValid } from "@/lib/auth";
 import { getPool } from "@/lib/db";
+import { recordAuditLog, getClientIp } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,6 +82,7 @@ export async function PATCH(request: NextRequest) {
     try {
       await client.query("BEGIN");
 
+      const updatedKeys: string[] = [];
       for (const [key, rawValue] of Object.entries(settings)) {
         const sanitizedKey = String(key).trim();
         // Cegah arbitrary key injection
@@ -94,7 +96,16 @@ export async function PATCH(request: NextRequest) {
            DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
           [sanitizedKey, sanitizedVal]
         );
+        updatedKeys.push(sanitizedKey);
       }
+
+      await recordAuditLog({
+        action: "SETTINGS_UPDATE",
+        entityType: "settings",
+        actorIp: getClientIp(request),
+        details: { updated_keys: updatedKeys },
+        client,
+      });
 
       await client.query("COMMIT");
     } catch (txErr) {

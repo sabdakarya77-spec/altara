@@ -9,6 +9,7 @@ import { EntryTable, type Row } from "./admin-entry-table";
 import { EntryDialog } from "./admin-entry-dialog";
 import { SettingsView } from "./settings-view";
 import { DashboardOverview } from "./dashboard-overview";
+import { AuditLogsView } from "./audit-logs-view";
 
 /**
  * Panel admin ALTARA.
@@ -45,7 +46,7 @@ export default function AdminDashboard() {
     setLoading(true);
     setLoadError("");
 
-    if (key === "overview" || key === "settings") {
+    if (key === "overview" || key === "settings" || key === "audit_logs") {
       setRows([]);
       setLoading(false);
       return;
@@ -319,10 +320,12 @@ export default function AdminDashboard() {
                     ? "Kelola identitas kontak yayasan, nomor rekening donasi resmi, dan media sosial resmi."
                     : activeKey === "donations"
                     ? "Daftar transaksi donasi yang masuk. Cocokkan kode dan nominal dengan mutasi bank resmi yayasan, lalu klik Ubah untuk memverifikasi status ke settlement."
+                    : activeKey === "audit_logs"
+                    ? "Catatan audit trail forensik keamanan dan rekaman riwayat perubahan data oleh administrator yayasan."
                     : "Perubahan tersimpan langsung di Postgres dan tampil di situs publik."}
                 </p>
               </div>
-              {activeKey !== "settings" && activeKey !== "donations" ? (
+              {activeKey !== "settings" && activeKey !== "donations" && activeKey !== "audit_logs" ? (
                 <button
                   onClick={openCreate}
                   className="rounded-md bg-ink px-4 py-2 text-sm text-parchment transition-colors hover:bg-forest"
@@ -351,6 +354,8 @@ export default function AdminDashboard() {
             />
           ) : activeKey === "settings" ? (
             <SettingsView />
+          ) : activeKey === "audit_logs" ? (
+            <AuditLogsView />
           ) : (
             <EntryTable
               collectionKey={active.key}

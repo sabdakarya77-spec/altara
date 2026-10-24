@@ -241,6 +241,12 @@ export const COLLECTIONS: CollectionConfig[] = [
     titleColumn: "key",
     fields: [],
   },
+  {
+    key: "audit_logs",
+    label: "Log Aktivitas (Audit)",
+    titleColumn: "action",
+    fields: [],
+  },
 ];
 
 /** Ubah nilai timestamptz dari database menjadi format input `date`. */
