@@ -1,4 +1,5 @@
 import { Pool, type QueryResultRow } from "pg";
+import fs from "node:fs";
 
 /**
  * Pool Postgres untuk ALTARA.
@@ -14,6 +15,31 @@ export function isDatabaseConfigured(): boolean {
   return Boolean(process.env.DATABASE_URL);
 }
 
+function getSslConfig() {
+  if (process.env.DATABASE_SSL !== "true") return undefined;
+
+  let ca: string | undefined = undefined;
+  if (process.env.DATABASE_CA_CERT) {
+    ca = process.env.DATABASE_CA_CERT;
+  } else if (process.env.DATABASE_CA_PATH) {
+    try {
+      ca = fs.readFileSync(process.env.DATABASE_CA_PATH, "utf-8");
+    } catch (e) {
+      console.error("[db] Gagal membaca DATABASE_CA_PATH:", (e as Error).message);
+    }
+  }
+
+  // Jika sertifikat CA terdefinisi, aktifkan verifikasi TLS secara default
+  const rejectUnauthorized = ca
+    ? process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false"
+    : process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true";
+
+  return {
+    rejectUnauthorized,
+    ...(ca ? { ca } : {}),
+  };
+}
+
 function createPool(): Pool | null {
   if (!isDatabaseConfigured()) return null;
   if (globalForDb.altaraPool) return globalForDb.altaraPool;
@@ -23,7 +49,7 @@ function createPool(): Pool | null {
     max: Number(process.env.DATABASE_POOL_MAX ?? 10),
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
-    ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined,
+    ssl: getSslConfig(),
   });
 
   // Jangan biarkan error pool menggagalkan proses: pemanggil sudah

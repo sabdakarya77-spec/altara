@@ -25,7 +25,7 @@ export type ProcessedImage = {
  * Bila input bukan gambar valid, error dilempar agar pemanggil bisa menolak.
  */
 export async function processImage(input: Buffer): Promise<ProcessedImage> {
-  const image = sharp(input, { failOn: "none" }).rotate(); // hormati EXIF orientation
+  const image = sharp(input, { failOn: "warning" }).rotate(); // hormati EXIF orientation
 
   const meta = await image.metadata();
 

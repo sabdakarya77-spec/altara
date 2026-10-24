@@ -33,14 +33,25 @@ const nextConfig = {
   // Jangan bocorkan versi framework lewat header.
   poweredByHeader: false,
 
-  // Header keamanan dasar. CSP sengaja tidak di-set di sini karena
-  // `next/script` dan inline style milik komponen perlu nonce yang
-  // dibuat per-request.
+  // Header keamanan terstruktur, termasuk Content Security Policy (CSP).
   async headers() {
+    const cspDirectives = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: blob:",
+      "connect-src 'self'",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ];
+
     return [
       {
         source: "/:path*",
         headers: [
+          { key: "Content-Security-Policy", value: cspDirectives.join("; ") },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
